@@ -239,7 +239,7 @@
             justify-content: center;
             font-size: 1.5rem;
             cursor: pointer;
-            z-index: 50;
+            z-index: 9999; /* Increased z-index to prevent collision */
             transition: all 0.3s ease;
         }
         .floating-cart-button:hover {
@@ -275,6 +275,61 @@
             margin-top: 5px;
             text-align: center;
         }
+
+        /* Carousel specific styles */
+        .carousel-container {
+            overflow: hidden;
+            width: 100%;
+            padding: 1rem 0; /* Add some vertical padding */
+        }
+
+        .carousel-track {
+            display: flex;
+            white-space: nowrap;
+            animation: scroll-carousel 30s linear infinite; /* Adjust duration for speed */
+            will-change: transform; /* Optimize for animation */
+        }
+        /* Pause animation on hover */
+        .carousel-track:hover {
+            animation-play-state: paused;
+        }
+
+        .carousel-item {
+            flex: 0 0 auto; /* Do not grow, do not shrink, base on content */
+            width: 300px; /* Fixed width for carousel items */
+            margin-right: 1.5rem; /* Gap between items */
+            min-height: 420px; /* Consistent height for cards */
+        }
+        /* Duplicate the carousel track content to ensure seamless loop */
+        .carousel-track::after {
+            content: attr(data-content); /* Duplicate content via data attribute */
+            display: flex;
+            white-space: nowrap;
+        }
+
+        @keyframes scroll-carousel {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(calc(-100% - 1.5rem * 6)); } /* Adjust based on num items and margin */
+            /* Assuming 6 items, -100% moves original content, then -1.5rem * 6 to move the duplicated gap */
+            /* If it's a perfect loop, it should be -width of all original items + total margin */
+            /* For 6 items of 300px and 1.5rem (24px) margin, total width = 6*300 + 5*24 = 1800 + 120 = 1920px. 
+            So, it should move 1920px (or the equivalent of 6 items + 5 margins) */
+            /* The calc(-100% - 1.5rem * num_items) ensures it moves past the end of the original set. */
+        }
+
+        @media (min-width: 768px) { /* Adjust for larger screens to show more items */
+            .carousel-item {
+                width: 300px; /* Maintain item width */
+            }
+            /* Adjust animation if more items are visible or track behaves differently */
+            @keyframes scroll-carousel {
+                0% { transform: translateX(0); }
+                /* Need to calculate the total width of the original items plus their margins, then move by that amount. */
+                /* For 6 items of 300px and 5 gaps of 1.5rem (24px), total width is 1800px + 120px = 1920px. */
+                /* So translate by that amount. */
+                100% { transform: translateX(-1920px); } 
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -290,9 +345,17 @@
         </button>
         <h1 class="text-xl font-bold">Tu Supermercado Mayorista</h1>
         <div class="flex items-center space-x-4">
-            <button class="text-gray-600 hover:text-gray-900 focus:outline-none">
-                <i class="fas fa-search"></i>
-            </button>
+            <!-- Search input and button -->
+            <div class="relative flex items-center">
+                <button class="text-gray-600 hover:text-gray-900 focus:outline-none" id="search-toggle-button">
+                    <i class="fas fa-search"></i>
+                </button>
+                <input type="search" id="search-input" placeholder="Buscar productos..."
+                       class="absolute right-0 top-1/2 -translate-y-1/2 w-48 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500
+                              opacity-0 pointer-events-none transition-all duration-300 ease-in-out
+                              lg:static lg:translate-y-0 lg:w-auto lg:opacity-100 lg:pointer-events-auto lg:ml-4">
+            </div>
+            <!-- Cart button -->
             <button class="text-gray-600 hover:text-gray-900 focus:outline-none" id="cart-button">
                 <i class="fas fa-shopping-cart"></i>
                 <span id="cart-count" class="bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center -ml-2 -mt-2 absolute top-4 right-4 sm:static">0</span>
@@ -327,7 +390,7 @@
         <!-- Categories Section (Mobile - Pills) -->
         <section class="mobile-only p-4">
             <h3 class="text-xl font-semibold mb-4 text-center">Explora Nuestras Categorías</h3>
-            <div id="mobile-categories-container" class="flex flex-wrap justify-center gap-3">
+            <div id="mobile-categories-container" class="flex flex-wrap justify-center gap-2">
                 <!-- Categories will be dynamically loaded here for mobile -->
             </div>
         </section>
@@ -335,7 +398,7 @@
         <!-- Categories Section (Desktop - Links) -->
         <section class="desktop-only p-4 bg-white shadow-sm">
             <div class="container mx-auto flex justify-center items-center overflow-x-auto whitespace-nowrap py-2 scrollbar-hide">
-                <nav class="flex space-x-2">
+                <nav class="flex space-x-1">
                     <button class="view-all-categories-btn" id="view-all-desktop-categories">Ver todas</button>
                     <span class="nav-separator">|</span>
                     <!-- Main categories will be dynamically loaded here for desktop -->
@@ -347,14 +410,16 @@
         <!-- Product Listing Section -->
         <section class="p-4 sm:p-6 lg:p-8">
             <div class="container mx-auto">
-                <h3 class="text-2xl font-bold mb-6 text-center">Nuestros Productos</h3>
+                <h3 id="product-section-title" class="text-2xl font-bold mb-6 text-center">Nuestros Productos</h3>
                 <!-- Subcategory pills for product filtering -->
-                <div id="subcategory-pills-container" class="flex flex-wrap justify-center gap-2 mb-6">
+                <div id="subcategory-pills-container" class="flex flex-wrap justify-center gap-2 mb-6 hidden">
                     <!-- Subcategory pills will be dynamically loaded here -->
                 </div>
-                <div id="product-list" class="product-grid">
-                    <!-- Products will be dynamically loaded here -->
+                <!-- This will display either the carousel or the filtered grid -->
+                <div id="product-display-container">
+                    <!-- Products will be dynamically loaded here (carousel or grid) -->
                 </div>
+                <p id="no-products-message" class="text-center text-gray-500 hidden mt-8">No se encontraron productos que coincidan con tu búsqueda.</p>
             </div>
         </section>
     </main>
@@ -397,11 +462,13 @@
 
         let cart = [];
         const cartCountElement = document.getElementById('cart-count');
-        const productListElement = document.getElementById('product-list');
+        const productListElement = document.getElementById('product-display-container'); // This will now hold either grid or carousel
         const mobileCategoriesContainer = document.getElementById('mobile-categories-container');
         const desktopMainCategoriesContainer = document.getElementById('desktop-main-categories-container');
         const subcategoryPillsContainer = document.getElementById('subcategory-pills-container');
-        const notificationMessageElement = document.getElementById('notification-message'); // New
+        const notificationMessageElement = document.getElementById('notification-message');
+        const productSectionTitle = document.getElementById('product-section-title');
+        const noProductsMessage = document.getElementById('no-products-message');
 
         // Modal elements
         const customModal = document.getElementById('customModal');
@@ -410,12 +477,21 @@
         const modalFooter = document.getElementById('modalFooter');
         const closeModalBtn = document.getElementById('closeModalBtn');
 
+        // Search elements
+        const searchToggleButton = document.getElementById('search-toggle-button');
+        const searchInput = document.getElementById('search-input');
+
         // Checkout state variables
         let checkoutData = {};
         let currentStep = 0; // 0 for cart display, 1-4 for checkout steps
         const totalSteps = 4; // Total number of checkout steps
 
-        // Product data with wholesale and unit prices
+        // Global filter states
+        let activeCategory = 'Todos'; // Default filter
+        let activeSubcategory = 'Todos'; // Default filter
+        let currentSearchQuery = ''; // Current search input value
+
+        // Product data with wholesale and unit prices (expanded to ~50 products)
         const products = [
             { id: 'prod1', name: 'Aceite de Girasol', category: 'Aceites y Vinagres', subcategory: 'Aceites', imageUrl: 'https://placehold.co/300x200/FFD700/000000?text=Aceite+Girasol', unitPrice: 2500, wholesalePrice: 2000, wholesaleQuantity: 6, stock: 100, description: 'Aceite de girasol de primera calidad.' },
             { id: 'prod2', name: 'Arroz Largo Fino', category: 'Comestibles', subcategory: 'Arroz y Legumbres', imageUrl: 'https://placehold.co/300x200/C0C0C0/000000?text=Arroz', unitPrice: 1200, wholesalePrice: 900, wholesaleQuantity: 10, stock: 200, description: 'Arroz de grano largo, ideal para guarniciones.' },
@@ -427,14 +503,54 @@
             { id: 'prod8', name: 'Gaseosa Cola', category: 'Bebidas', subcategory: 'Gaseosas', imageUrl: 'https://placehold.co/300x200/B22222/FFFFFF?text=Gaseosa', unitPrice: 1800, wholesalePrice: 1400, wholesaleQuantity: 8, stock: 120, description: 'Refrescante bebida cola, 2.25L.' },
             { id: 'prod9', name: 'Papel Higiénico', category: 'Limpieza', subcategory: 'Papel y Servilletas', imageUrl: 'https://placehold.co/300x200/ADD8E6/000000?text=Papel+Higienico', unitPrice: 5000, wholesalePrice: 4200, wholesaleQuantity: 3, stock: 70, description: 'Paquete de 6 rollos, doble hoja.' },
             { id: 'prod10', name: 'Atún en Lata', category: 'Comestibles', subcategory: 'Enlatados', imageUrl: 'https://placehold.co/300x200/5F9EA0/FFFFFF?text=Atun', unitPrice: 1500, wholesalePrice: 1100, wholesaleQuantity: 10, stock: 110, description: 'Atún en aceite, alto en proteínas.' },
+            { id: 'prod11', name: 'Azúcar Refinada', category: 'Comestibles', subcategory: 'Endulzantes', imageUrl: 'https://placehold.co/300x200/F0F8FF/000000?text=Azucar', unitPrice: 900, wholesalePrice: 700, wholesaleQuantity: 10, stock: 180, description: 'Azúcar de caña, 1kg.' },
+            { id: 'prod12', name: 'Yerba Mate Suave', category: 'Desayuno y Merienda', subcategory: 'Yerba Mate', imageUrl: 'https://placehold.co/300x200/A0522D/FFFFFF?text=Yerba+Mate', unitPrice: 2800, wholesalePrice: 2200, wholesaleQuantity: 5, stock: 130, description: 'Yerba mate con bajo contenido de polvo.' },
+            { id: 'prod13', name: 'Harina de Trigo 000', category: 'Comestibles', subcategory: 'Harinas y Premezclas', imageUrl: 'https://placehold.co/300x200/F5DEB3/000000?text=Harina', unitPrice: 700, wholesalePrice: 550, wholesaleQuantity: 12, stock: 250, description: 'Harina de trigo de fuerza, 1kg.' },
+            { id: 'prod14', name: 'Sal Fina Cocina', category: 'Comestibles', subcategory: 'Condimentos', imageUrl: 'https://placehold.co/300x200/F8F8F8/000000?text=Sal', unitPrice: 400, wholesalePrice: 300, wholesaleQuantity: 20, stock: 350, description: 'Sal de mesa, 500g.' },
+            { id: 'prod15', name: 'Pan de Molde Blanco', category: 'Panadería y Pastelería', subcategory: 'Panes', imageUrl: 'https://placehold.co/300x200/FFF8DC/000000?text=Pan+Molde', unitPrice: 1600, wholesalePrice: 1300, wholesaleQuantity: 6, stock: 60, description: 'Pan lactal fresco, 340g.' },
+            { id: 'prod16', name: 'Mermelada Durazno', category: 'Desayuno y Merienda', subcategory: 'Dulces y Mermeladas', imageUrl: 'https://placehold.co/300x200/FFDAB9/000000?text=Mermelada', unitPrice: 1300, wholesalePrice: 1000, wholesaleQuantity: 8, stock: 95, description: 'Mermelada artesanal de durazno, 300g.' },
+            { id: 'prod17', name: 'Crema de Leche', category: 'Lácteos y Frescos', subcategory: 'Cremas y Untables', imageUrl: 'https://placehold.co/300x200/F5FFFA/000000?text=Crema', unitPrice: 1100, wholesalePrice: 900, wholesaleQuantity: 10, stock: 75, description: 'Crema de leche pasteurizada, 200ml.' },
+            { id: 'prod18', name: 'Lavandina Cloro', category: 'Limpieza', subcategory: 'Desinfectantes', imageUrl: 'https://placehold.co/300x200/E0FFFF/000000?text=Lavandina', unitPrice: 950, wholesalePrice: 750, wholesaleQuantity: 6, stock: 110, description: 'Lavandina concentrada, 1L.' },
+            { id: 'prod19', name: 'Alcohol en Gel', category: 'Limpieza', subcategory: 'Cuidado Personal', imageUrl: 'https://placehold.co/300x200/F0F8FF/000000?text=Alcohol+Gel', unitPrice: 1800, wholesalePrice: 1500, wholesaleQuantity: 5, stock: 85, description: 'Alcohol en gel antibacterial, 500ml.' },
+            { id: 'prod20', name: 'Mayonesa Clásica', category: 'Aderezos y Salsas', subcategory: 'Salsas Frías', imageUrl: 'https://placehold.co/300x200/FDF5E6/000000?text=Mayonesa', unitPrice: 1400, wholesalePrice: 1100, wholesaleQuantity: 8, stock: 140, description: 'Mayonesa tradicional, 250g.' },
+            { id: 'prod21', name: 'Ketchup Tomate', category: 'Aderezos y Salsas', subcategory: 'Salsas Frías', imageUrl: 'https://placehold.co/300x200/B22222/FFFFFF?text=Ketchup', unitPrice: 1300, wholesalePrice: 1000, wholesaleQuantity: 8, stock: 100, description: 'Salsa de tomate dulce, 300g.' },
+            { id: 'prod22', name: 'Galletas de Agua', category: 'Panadería y Pastelería', subcategory: 'Galletas', imageUrl: 'https://placehold.co/300x200/F5F5DC/000000?text=Galletas+Agua', unitPrice: 600, wholesalePrice: 450, wholesaleQuantity: 15, stock: 200, description: 'Galletas saladas para acompañar comidas.' },
+            { id: 'prod23', name: 'Queso Cremoso', category: 'Lácteos y Frescos', subcategory: 'Quesos', imageUrl: 'https://placehold.co/300x200/F0F8FF/000000?text=Queso+Cremoso', unitPrice: 4500, wholesalePrice: 3800, wholesaleQuantity: 3, stock: 50, description: 'Queso fresco para sándwiches o postres.' },
+            { id: 'prod24', name: 'Manteca sin Sal', category: 'Lácteos y Frescos', subcategory: 'Cremas y Untables', imageUrl: 'https://placehold.co/300x200/FFFFF0/000000?text=Manteca', unitPrice: 1800, wholesalePrice: 1500, wholesaleQuantity: 8, stock: 70, description: 'Manteca de primera calidad, 200g.' },
+            { id: 'prod25', name: 'Detergente para Platos', category: 'Limpieza', subcategory: 'Cocina', imageUrl: 'https://placehold.co/300x200/87CEEB/000000?text=Detergente+Platos', unitPrice: 1200, wholesalePrice: 950, wholesaleQuantity: 6, stock: 160, description: 'Detergente concentrado, 750ml.' },
+            { id: 'prod26', name: 'Esponja de Cocina', category: 'Limpieza', subcategory: 'Cocina', imageUrl: 'https://placehold.co/300x200/E6E6FA/000000?text=Esponja', unitPrice: 300, wholesalePrice: 200, wholesaleQuantity: 12, stock: 300, description: 'Esponja doble cara para limpieza.' },
+            { id: 'prod27', name: 'Servilletas de Papel', category: 'Limpieza', subcategory: 'Papel y Servilletas', imageUrl: 'https://placehold.co/300x200/F8F8FF/000000?text=Servilletas', unitPrice: 800, wholesalePrice: 600, wholesaleQuantity: 10, stock: 150, description: 'Paquete de 100 servilletas.' },
+            { id: 'prod28', name: 'Vino Tinto Malbec', category: 'Bebidas', subcategory: 'Vinos', imageUrl: 'https://placehold.co/300x200/800000/FFFFFF?text=Vino+Malbec', unitPrice: 6000, wholesalePrice: 5000, wholesaleQuantity: 3, stock: 40, description: 'Vino tinto joven, 750ml.' },
+            { id: 'prod29', name: 'Cerveza Lager', category: 'Bebidas', subcategory: 'Cervezas', imageUrl: 'https://placehold.co/300x200/FFD700/000000?text=Cerveza', unitPrice: 1500, wholesalePrice: 1200, wholesaleQuantity: 6, stock: 90, description: 'Cerveza rubia clásica, lata 473ml.' },
+            { id: 'prod30', name: 'Galletas Dulces Variadas', category: 'Panadería y Pastelería', subcategory: 'Galletas', imageUrl: 'https://placehold.co/300x200/FAEBD7/000000?text=Galletas+Dulces', unitPrice: 900, wholesalePrice: 700, wholesaleQuantity: 10, stock: 180, description: 'Surtido de galletas dulces, 300g.' },
+            { id: 'prod31', name: 'Yogur Firme Vainilla', category: 'Lácteos y Frescos', subcategory: 'Yogures y Postres', imageUrl: 'https://placehold.co/300x200/F0FFF0/000000?text=Yogur', unitPrice: 700, wholesalePrice: 550, wholesaleQuantity: 12, stock: 140, description: 'Yogur cremoso sabor vainilla, 125g.' },
+            { id: 'prod32', name: 'Gaseosa Lima-Limón', category: 'Bebidas', subcategory: 'Gaseosas', imageUrl: 'https://placehold.co/300x200/ADFF2F/000000?text=Gaseosa+Lima', unitPrice: 1800, wholesalePrice: 1400, wholesaleQuantity: 8, stock: 100, description: 'Bebida gaseosa refrescante, 2.25L.' },
+            { id: 'prod33', name: 'Jugo de Naranja Brik', category: 'Bebidas', subcategory: 'Jugos', imageUrl: 'https://placehold.co/300x200/FFA500/FFFFFF?text=Jugo+Naranja+Brik', unitPrice: 1700, wholesalePrice: 1300, wholesaleQuantity: 6, stock: 90, description: 'Jugo de naranja natural, 1L.' },
+            { id: 'prod34', name: 'Papas Fritas Snacks', category: 'Snacks', subcategory: 'Papas Fritas', imageUrl: 'https://placehold.co/300x200/D2B48C/000000?text=Papas+Fritas', unitPrice: 1000, wholesalePrice: 800, wholesaleQuantity: 10, stock: 120, description: 'Papas fritas clásicas, 100g.' },
+            { id: 'prod35', name: 'Cereales de Maíz', category: 'Desayuno y Merienda', subcategory: 'Cereales', imageUrl: 'https://placehold.co/300x200/F5DEB3/000000?text=Cereales', unitPrice: 2200, wholesalePrice: 1800, wholesaleQuantity: 6, stock: 70, description: 'Cereales de maíz tostado, 500g.' },
+            { id: 'prod36', name: 'Cacao en Polvo', category: 'Desayuno y Merienda', subcategory: 'Cereales', imageUrl: 'https://placehold.co/300x200/D2691E/FFFFFF?text=Cacao', unitPrice: 1500, wholesalePrice: 1200, wholesaleQuantity: 8, stock: 80, description: 'Cacao instantáneo para leche.' },
+            { id: 'prod37', name: 'Sopa Instantánea Pollo', category: 'Comestibles', subcategory: 'Sopas y Caldos', imageUrl: 'https://placehold.co/300x200/F0F8FF/000000?text=Sopa+Pollo', unitPrice: 400, wholesalePrice: 300, wholesaleQuantity: 15, stock: 250, description: 'Sopa deshidratada sabor pollo.' },
+            { id: 'prod38', name: 'Gelatina Frutilla', category: 'Postres', subcategory: 'Gelatinas', imageUrl: 'https://placehold.co/300x200/FF6347/FFFFFF?text=Gelatina+Frutilla', unitPrice: 350, wholesalePrice: 250, wholesaleQuantity: 20, stock: 300, description: 'Postre de gelatina sabor frutilla.' },
+            { id: 'prod39', name: 'Cebolla Fresca', category: 'Frutas y Verduras', subcategory: 'Verduras', imageUrl: 'https://placehold.co/300x200/FFE4B5/000000?text=Cebolla', unitPrice: 600, wholesalePrice: 400, wholesaleQuantity: 5, stock: 100, description: 'Cebollas grandes, por kg.' },
+            { id: 'prod40', name: 'Manzana Roja', category: 'Frutas y Verduras', subcategory: 'Frutas', imageUrl: 'https://placehold.co/300x200/FF0000/FFFFFF?text=Manzana', unitPrice: 900, wholesalePrice: 700, wholesaleQuantity: 6, stock: 80, description: 'Manzanas frescas y jugosas, por kg.' },
+            { id: 'prod41', name: 'Agua Mineral sin Gas', category: 'Bebidas', subcategory: 'Aguas', imageUrl: 'https://placehold.co/300x200/ADD8E6/000000?text=Agua', unitPrice: 500, wholesalePrice: 400, wholesaleQuantity: 12, stock: 200, description: 'Agua purificada, 1.5L.' },
+            { id: 'prod42', name: 'Agua Mineral con Gas', category: 'Bebidas', subcategory: 'Aguas', imageUrl: 'https://placehold.co/300x200/ADD8E6/000000?text=Agua+Gas', unitPrice: 550, wholesalePrice: 450, wholesaleQuantity: 12, stock: 180, description: 'Agua con burbujas, 1.5L.' },
+            { id: 'prod43', name: 'Pañales para Bebé', category: 'Bebés y Niños', subcategory: 'Pañales', imageUrl: 'https://placehold.co/300x200/E0FFFF/000000?text=Pañales', unitPrice: 8000, wholesalePrice: 7000, wholesaleQuantity: 2, stock: 30, description: 'Pañales ultra absorbentes, pack grande.' },
+            { id: 'prod44', name: 'Toallitas Húmedas', category: 'Bebés y Niños', subcategory: 'Cuidado del Bebé', imageUrl: 'https://placehold.co/300x200/F0F8FF/000000?text=Toallitas', unitPrice: 1500, wholesalePrice: 1200, wholesaleQuantity: 5, stock: 100, description: 'Toallitas húmedas hipoalergénicas.' },
+            { id: 'prod45', name: 'Champú para Cabello', category: 'Cuidado Personal', subcategory: 'Cuidado del Cabello', imageUrl: 'https://placehold.co/300x200/B0E0E6/000000?text=Champú', unitPrice: 2500, wholesalePrice: 2000, wholesaleQuantity: 4, stock: 60, description: 'Champú hidratante, 400ml.' },
+            { id: 'prod46', name: 'Acondicionador', category: 'Cuidado Personal', subcategory: 'Cuidado del Cabello', imageUrl: 'https://placehold.co/300x200/B0E0E6/000000?text=Acondicionador', unitPrice: 2500, wholesalePrice: 2000, wholesaleQuantity: 4, stock: 60, description: 'Acondicionador para todo tipo de cabello, 400ml.' },
+            { id: 'prod47', name: 'Pasta Dental', category: 'Cuidado Personal', subcategory: 'Higiene Bucal', imageUrl: 'https://placehold.co/300x200/F8F8FF/000000?text=Pasta+Dental', unitPrice: 1000, wholesalePrice: 800, wholesaleQuantity: 8, stock: 150, description: 'Pasta dental con flúor, 90g.' },
+            { id: 'prod48', name: 'Cepillo de Dientes', category: 'Cuidado Personal', subcategory: 'Higiene Bucal', imageUrl: 'https://placehold.co/300x200/F8F8FF/000000?text=Cepillo', unitPrice: 600, wholesalePrice: 450, wholesaleQuantity: 10, stock: 200, description: 'Cepillo de dientes de cerdas suaves.' },
+            { id: 'prod49', name: 'Jabón de Tocador', category: 'Cuidado Personal', subcategory: 'Higiene Corporal', imageUrl: 'https://placehold.co/300x200/FFE4E1/000000?text=Jabon', unitPrice: 400, wholesalePrice: 300, wholesaleQuantity: 12, stock: 220, description: 'Jabón en barra, aroma floral.' },
+            { id: 'prod50', name: 'Desodorante Aerosol', category: 'Cuidado Personal', subcategory: 'Higiene Corporal', imageUrl: 'https://placehold.co/300x200/E0FFFF/000000?text=Desodorante', unitPrice: 1800, wholesalePrice: 1400, wholesaleQuantity: 6, stock: 90, description: 'Desodorante antitranspirante, 150ml.' }
         ];
+
+        // Log the total number of products to confirm
+        console.log("Total products available:", products.length);
 
         // Extract unique categories and subcategories
         const categories = [...new Set(products.map(p => p.category))];
         const subcategories = [...new Set(products.map(p => p.subcategory))];
-
-        let activeCategory = 'Todos'; // Default filter
-        let activeSubcategory = 'Todos'; // Default filter
 
         // --- Firebase Initialization and Authentication ---
         window.onload = async function() {
@@ -466,15 +582,15 @@
 
                 // Initial display of elements
                 displayCategories();
-                displaySubcategories();
-                displayProducts(products); // Display all products initially
+                // Subcategories will be hidden by default as activeCategory is 'Todos'
+                // displaySubcategories(); // No longer called directly on load
+                renderProductsBasedOnFiltersAndSearch(); // Initial display: carousel of most sold products
 
             } catch (error) {
                 console.error("Error initializing Firebase or signing in:", error);
                 // Fallback: display products without Firebase if error occurs
                 displayCategories();
-                displaySubcategories();
-                displayProducts(products);
+                renderProductsBasedOnFiltersAndSearch(); // Initial display: carousel of most sold products
                 showModal("Error de Conexión", "No se pudo conectar con los servicios de Firebase. Algunas funcionalidades pueden no estar disponibles.", [{ text: "Entendido", action: "close" }]);
             }
         };
@@ -609,9 +725,15 @@
             subcategoryPillsContainer.innerHTML = '';
             let filteredSubcategories = [];
             if (activeCategory === 'Todos') {
-                filteredSubcategories = ['Todos', ...subcategories];
+                filteredSubcategories = ['Todos']; // Only "Todos" when no specific category is active
             } else {
                 filteredSubcategories = ['Todos', ...new Set(products.filter(p => p.category === activeCategory).map(p => p.subcategory))];
+            }
+
+            if (activeCategory === 'Todos' || filteredSubcategories.length <= 1) { // Hide if "Todos" or only "Todos" subcategory
+                subcategoryPillsContainer.classList.add('hidden');
+            } else {
+                subcategoryPillsContainer.classList.remove('hidden');
             }
 
             filteredSubcategories.forEach(sub => {
@@ -630,20 +752,38 @@
         }
 
         // --- Product Display ---
-        function displayProducts(filteredProducts) {
-            productListElement.innerHTML = '';
-            if (filteredProducts.length === 0) {
-                productListElement.innerHTML = '<p class="text-center text-gray-500 col-span-full">No se encontraron productos en esta categoría/subcategoría.</p>';
+        function displayProducts(productsToDisplay, isCarousel = false) {
+            productListElement.innerHTML = ''; // Clear previous content
+            noProductsMessage.classList.add('hidden'); // Hide no products message by default
+
+            if (productsToDisplay.length === 0) {
+                productListElement.innerHTML = '';
+                noProductsMessage.classList.remove('hidden');
                 return;
             }
 
-            filteredProducts.forEach(product => {
+            let containerElement;
+            if (isCarousel) {
+                containerElement = document.createElement('div');
+                containerElement.className = 'carousel-container';
+                const trackElement = document.createElement('div');
+                trackElement.className = 'carousel-track';
+                trackElement.setAttribute('data-content', ''); // For duplicating content in CSS
+                containerElement.appendChild(trackElement);
+                productListElement.appendChild(containerElement); // Add carousel container to main product list element
+            } else {
+                containerElement = document.createElement('div');
+                containerElement.className = 'product-grid'; // Use the grid for regular display
+                productListElement.appendChild(containerElement);
+            }
+
+            productsToDisplay.forEach(product => {
                 const productInCart = cart.find(item => item.id === product.id);
                 const quantityInCart = productInCart ? productInCart.quantity : 0;
 
                 const productCard = document.createElement('div');
-                // Added max-w-sm and min-h-[420px] for consistent card sizing on desktop
-                productCard.className = 'bg-white rounded-lg shadow-md overflow-hidden transform transition duration-300 hover:scale-105 flex flex-col max-w-sm min-h-[420px]';
+                // Added max-w-sm and min-h-[420px] for consistent card sizing
+                productCard.className = `bg-white rounded-lg shadow-md overflow-hidden transform transition duration-300 hover:scale-105 flex flex-col max-w-sm min-h-[420px] ${isCarousel ? 'carousel-item' : ''}`;
                 productCard.innerHTML = `
                     <img src="${product.imageUrl}" alt="${product.name}" class="w-full h-48 object-cover">
                     <div class="p-4 flex-grow">
@@ -690,37 +830,78 @@
                         </div>
                     </div>
                 `;
-                productListElement.appendChild(productCard);
+                if (isCarousel) {
+                    containerElement.querySelector('.carousel-track').appendChild(productCard);
+                } else {
+                    containerElement.appendChild(productCard);
+                }
                 // Update price display immediately after rendering
                 updateDisplayedPrice(product.id);
             });
+
+            if (isCarousel) {
+                // For seamless looping, duplicate the content of the carousel track
+                const trackElement = containerElement.querySelector('.carousel-track');
+                // Store the innerHTML of the track as a data attribute, which CSS can then use for `content`
+                trackElement.setAttribute('data-content', trackElement.innerHTML);
+            }
         }
 
         // --- Filtering Logic ---
         function filterProductsByCategory(category) {
             activeCategory = category;
             activeSubcategory = 'Todos'; // Reset subcategory filter when category changes
+            currentSearchQuery = ''; // Clear search when category filter is applied
+            searchInput.value = ''; // Clear search input visually
             displayCategories();
-            displaySubcategories(); // Re-render subcategory pills based on new active category
-            filterAndDisplayProducts();
+            displaySubcategories(); // Re-render subcategory pills based on new active category (will hide if 'Todos')
+            renderProductsBasedOnFiltersAndSearch();
         }
 
         function filterProductsBySubcategory(subcategory) {
             activeSubcategory = subcategory;
+            currentSearchQuery = ''; // Clear search when subcategory filter is applied
+            searchInput.value = ''; // Clear search input visually
             displaySubcategories();
-            filterAndDisplayProducts();
+            renderProductsBasedOnFiltersAndSearch();
         }
 
-        function filterAndDisplayProducts() {
-            let filtered = products;
-            if (activeCategory !== 'Todos') {
-                filtered = filtered.filter(p => p.category === activeCategory);
+        function renderProductsBasedOnFiltersAndSearch() {
+            let filteredProducts = products;
+            let sectionTitle = "Nuestros Productos";
+            let isCarouselView = false;
+
+            if (currentSearchQuery) {
+                // If there's a search query, prioritize it and ignore category filters
+                filteredProducts = products.filter(p => p.name.toLowerCase().includes(currentSearchQuery.toLowerCase()) ||
+                                               p.description.toLowerCase().includes(currentSearchQuery.toLowerCase()));
+                sectionTitle = `Resultados para "${currentSearchQuery}"`;
+                // Ensure category filters are reset visually if search is active
+                activeCategory = 'Todos';
+                activeSubcategory = 'Todos';
+                displayCategories(); // Re-render categories to show "Todos" active
+                displaySubcategories(); // Subcategories will be hidden
+            } else if (activeCategory !== 'Todos') {
+                // If a specific category is selected, show all products in that category/subcategory
+                filteredProducts = filteredProducts.filter(p => p.category === activeCategory);
+                sectionTitle = `Productos en ${activeCategory}`;
+                if (activeSubcategory !== 'Todos') {
+                    filteredProducts = filteredProducts.filter(p => p.subcategory === activeSubcategory);
+                    sectionTitle += ` > ${activeSubcategory}`;
+                }
+                displaySubcategories(); // Re-render subcategories (will show if category selected)
+            } else {
+                // Default view: show "Most Sold Products" carousel (first 6 products)
+                filteredProducts = products.slice(0, 6); // Display first 6 products for the carousel
+                sectionTitle = "Productos Más Vendidos";
+                isCarouselView = true;
+                displaySubcategories(); // Subcategories will be hidden
             }
-            if (activeSubcategory !== 'Todos') {
-                filtered = filtered.filter(p => p.subcategory === activeSubcategory);
-            }
-            displayProducts(filtered);
+
+            productSectionTitle.textContent = sectionTitle;
+            displayProducts(filteredProducts, isCarouselView);
         }
+
 
         // --- Quantity and Price Logic ---
         window.updateQuantity = function(productId, change) {
@@ -1171,8 +1352,40 @@
             displayCartContents(); // This will show the cart content modal
         });
 
-        // Initial filtering and display of products on page load
-        filterAndDisplayProducts();
+        // Search bar toggle and input listener
+        searchToggleButton.addEventListener('click', () => {
+            searchInput.classList.toggle('opacity-0');
+            searchInput.classList.toggle('pointer-events-none');
+            // If the search bar becomes visible, focus it
+            if (!searchInput.classList.contains('opacity-0')) {
+                searchInput.focus();
+            }
+        });
+
+        searchInput.addEventListener('input', (event) => {
+            currentSearchQuery = event.target.value.trim();
+            // Clear active category/subcategory filters when searching
+            activeCategory = 'Todos';
+            activeSubcategory = 'Todos';
+            displayCategories(); // Re-render categories to reflect "Todos" active
+            displaySubcategories(); // Subcategories will be hidden when searching
+            renderProductsBasedOnFiltersAndSearch();
+        });
+
+        // Ensure search input is visible on larger screens by default
+        function checkScreenSizeForSearchInput() {
+            if (window.innerWidth >= 1024) { // Equivalent to Tailwind's lg breakpoint
+                searchInput.classList.remove('opacity-0', 'pointer-events-none');
+                searchInput.classList.add('lg:static', 'lg:translate-y-0', 'lg:w-auto', 'lg:opacity-100', 'lg:pointer-events-auto', 'lg:ml-4');
+            } else {
+                searchInput.classList.add('opacity-0', 'pointer-events-none');
+                searchInput.classList.remove('lg:static', 'lg:translate-y-0', 'lg:w-auto', 'lg:opacity-100', 'lg:pointer-events-auto', 'lg:ml-4');
+            }
+        }
+
+        // Call on load and on resize
+        checkScreenSizeForSearchInput();
+        window.addEventListener('resize', checkScreenSizeForSearchInput);
     </script>
 </body>
 </html>
