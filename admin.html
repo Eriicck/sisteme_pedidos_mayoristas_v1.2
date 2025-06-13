@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Productos</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f8f8;
+            color: #333;
+        }
+        /* Custom modal styles (similar to the main app) */
+        .custom-modal {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .custom-modal.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .custom-modal-content {
+            background-color: #fff;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+            margin: 0 1rem;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+        .custom-modal.visible .custom-modal-content {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+    <header class="bg-blue-600 text-white shadow-md p-4 flex justify-between items-center z-20">
+        <h1 class="text-xl font-bold">Panel de Administración de Productos</h1>
+        <button id="add-product-btn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition duration-200">
+            <i class="fas fa-plus mr-2"></i> Nuevo Producto
+        </button>
+    </header>
+
+    <main class="flex-grow p-4 sm:p-6 lg:p-8">
+        <div class="container mx-auto">
+            <div id="loading-indicator" class="text-center text-gray-600 text-lg my-8 hidden">Cargando productos...</div>
+            <div id="product-list" class="bg-white shadow-md rounded-lg p-6">
+                <h2 class="text-2xl font-semibold mb-4">Lista de Productos</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Unit.</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Mayorista</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cant. Mayorista</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="product-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Product rows will be dynamically loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                <p id="no-products-message" class="text-center text-gray-500 hidden mt-4">No hay productos registrados.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Custom Modal for Add/Edit Product -->
+    <div id="productModal" class="custom-modal">
+        <div class="custom-modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h4 id="modalTitle" class="text-xl font-bold">Añadir Nuevo Producto</h4>
+                <button id="closeModalBtn" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+            </div>
+            <form id="productForm" class="space-y-4">
+                <div>
+                    <label for="productName" class="block text-sm font-medium text-gray-700">Nombre del Producto</label>
+                    <input type="text" id="productName" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                <div>
+                    <label for="productDescription" class="block text-sm font-medium text-gray-700">Descripción</label>
+                    <textarea id="productDescription" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="productCategory" class="block text-sm font-medium text-gray-700">Categoría</label>
+                        <input type="text" id="productCategory" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label for="productSubcategory" class="block text-sm font-medium text-gray-700">Subcategoría</label>
+                        <input type="text" id="productSubcategory" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label for="productImageUrl" class="block text-sm font-medium text-gray-700">URL de Imagen (Placeholder)</label>
+                    <input type="text" id="productImageUrl" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" value="https://placehold.co/300x200/F0F0F0/000000?text=Producto">
+                    <p class="mt-1 text-xs text-gray-500">Puedes usar un URL de placeholder como el sugerido.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="unitPrice" class="block text-sm font-medium text-gray-700">Precio Unitario ($)</label>
+                        <input type="number" id="unitPrice" step="any" min="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label for="wholesalePrice" class="block text-sm font-medium text-gray-700">Precio Mayorista ($)</label>
+                        <input type="number" id="wholesalePrice" step="any" min="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="wholesaleQuantity" class="block text-sm font-medium text-gray-700">Cantidad Mayorista</label>
+                        <input type="number" id="wholesaleQuantity" min="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label for="productStock" class="block text-sm font-medium text-gray-700">Stock</label>
+                    <input type="number" id="productStock" min="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" id="cancelFormBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition duration-200">Cancelar</button>
+                    <button type="submit" id="saveProductBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200">Guardar Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Modal for Confirmations/Alerts -->
+    <div id="alertModal" class="custom-modal">
+        <div class="custom-modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h4 id="alertModalTitle" class="text-xl font-bold">Alerta</h4>
+                <button id="closeAlertModalBtn" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+            </div>
+            <div id="alertModalBody" class="text-gray-700 mb-6">
+                <!-- Message will be injected here -->
+            </div>
+            <div id="alertModalFooter" class="flex justify-end space-x-4">
+                <!-- Buttons will be injected here -->
+            </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // Global variables for Firebase config and auth, with fallbacks for local testing
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-admin-app'; // Use a unique default ID for admin
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            // Placeholder config for local testing if __firebase_config is undefined.
+            // **IMPORTANT**: Replace with your actual Firebase project config if running outside Canvas.
+            // This is just to prevent errors when running locally.
+            apiKey: "YOUR_API_KEY", // Replace with your actual API key
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        let app;
+        let db;
+        let auth;
+        let userId = 'anonymous'; // Default userId
+
+        const productTableBody = document.getElementById('product-table-body');
+        const noProductsMessage = document.getElementById('no-products-message');
+        const addProductBtn = document.getElementById('add-product-btn');
+        const loadingIndicator = document.getElementById('loading-indicator');
+
+        // Product Modal elements
+        const productModal = document.getElementById('productModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const productForm = document.getElementById('productForm');
+        const productName = document.getElementById('productName');
+        const productDescription = document.getElementById('productDescription');
+        const productCategory = document.getElementById('productCategory');
+        const productSubcategory = document.getElementById('productSubcategory');
+        const productImageUrl = document.getElementById('productImageUrl');
+        const unitPrice = document.getElementById('unitPrice');
+        const wholesalePrice = document.getElementById('wholesalePrice');
+        const wholesaleQuantity = document.getElementById('wholesaleQuantity');
+        const productStock = document.getElementById('productStock');
+        const saveProductBtn = document.getElementById('saveProductBtn');
+        const cancelFormBtn = document.getElementById('cancelFormBtn');
+
+        let editingProductId = null; // To store the ID of the product being edited
+
+        // Alert Modal elements
+        const alertModal = document.getElementById('alertModal');
+        const alertModalTitle = document.getElementById('alertModalTitle');
+        const alertModalBody = document.getElementById('alertModalBody');
+        const alertModalFooter = document.getElementById('alertModalFooter');
+        const closeAlertModalBtn = document.getElementById('closeAlertModalBtn');
+
+
+        // --- Firebase Initialization and Authentication ---
+        window.onload = async function() {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Sign in anonymously or with custom token
+                if (typeof __initial_auth_token !== 'undefined') {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Listen for auth state changes to set userId
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log("Admin Firebase user authenticated:", userId);
+                        setupProductListener(); // Start listening to products once authenticated
+                    } else {
+                        userId = crypto.randomUUID(); // Anonymous user ID
+                        console.log("Admin Firebase user is anonymous:", userId);
+                        setupProductListener(); // Still set up listener for anonymous user
+                    }
+                });
+
+            } catch (error) {
+                console.error("Error initializing Firebase or signing in:", error);
+                showAlert("Error de Conexión", "No se pudo conectar con los servicios de Firebase. Asegúrate de estar en el entorno de Canvas o de haber configurado tus propias claves.", [{ text: "Entendido", action: "close" }]);
+                loadingIndicator.classList.add('hidden'); // Hide loading if error
+            }
+        };
+
+        // --- Firebase Product Listener ---
+        function setupProductListener() {
+            loadingIndicator.classList.remove('hidden'); // Show loading indicator
+            // Path for public data: /artifacts/{appId}/public/data/{your_collection_name}
+            const productsCollectionRef = collection(db, `artifacts/${appId}/public/data/products`);
+
+            onSnapshot(productsCollectionRef, (snapshot) => {
+                const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderProductTable(products);
+                loadingIndicator.classList.add('hidden'); // Hide loading indicator
+            }, (error) => {
+                console.error("Error listening to product changes:", error);
+                showAlert("Error de Datos", "No se pudieron cargar los productos en tiempo real.", [{ text: "Cerrar", action: "close" }]);
+                loadingIndicator.classList.add('hidden'); // Hide loading if error
+            });
+        }
+
+
+        // --- UI Helper Functions (Modals) ---
+
+        // Generic Alert Modal Function
+        function showAlert(title, bodyHtml, buttons) {
+            alertModalTitle.innerHTML = title;
+            alertModalBody.innerHTML = bodyHtml;
+            alertModalFooter.innerHTML = ''; // Clear previous buttons
+
+            buttons.forEach(btn => {
+                const buttonElement = document.createElement('button');
+                buttonElement.textContent = btn.text;
+                buttonElement.className = 'px-4 py-2 rounded-md transition-colors duration-200';
+                if (btn.action === 'close') {
+                    buttonElement.classList.add('bg-gray-200', 'text-gray-800', 'hover:bg-gray-300');
+                    buttonElement.onclick = () => alertModal.classList.remove('visible');
+                } else if (btn.action === 'confirm') {
+                    buttonElement.classList.add('bg-red-600', 'text-white', 'hover:bg-red-700');
+                    buttonElement.onclick = () => {
+                        btn.callback(); // Execute callback
+                        alertModal.classList.remove('visible'); // Close after action
+                    };
+                } else if (btn.action === 'custom') {
+                    buttonElement.classList.add(btn.className || 'bg-blue-600', btn.color || 'text-white', btn.hover || 'hover:bg-blue-700');
+                    buttonElement.onclick = () => {
+                        if (btn.callback) btn.callback();
+                        // Modal does not close by default for custom actions, unless callback handles it
+                    };
+                }
+                alertModalFooter.appendChild(buttonElement);
+            });
+
+            alertModal.classList.add('visible');
+        }
+
+        // Close Alert Modal Event Listener
+        closeAlertModalBtn.addEventListener('click', () => {
+            alertModal.classList.remove('visible');
+        });
+
+        // Function to show/hide the product form modal
+        function toggleProductModal(show = true) {
+            if (show) {
+                productModal.classList.add('visible');
+            } else {
+                productModal.classList.remove('visible');
+                editingProductId = null; // Reset editing state
+                productForm.reset(); // Clear form fields
+                modalTitle.textContent = "Añadir Nuevo Producto"; // Reset title
+                productImageUrl.value = "https://placehold.co/300x200/F0F0F0/000000?text=Producto"; // Reset image placeholder
+            }
+        }
+
+        // --- Product Form Management ---
+
+        addProductBtn.addEventListener('click', () => {
+            toggleProductModal(true);
+        });
+
+        closeModalBtn.addEventListener('click', () => {
+            toggleProductModal(false);
+        });
+
+        cancelFormBtn.addEventListener('click', () => {
+            toggleProductModal(false);
+        });
+
+        productForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const productData = {
+                name: productName.value.trim(),
+                description: productDescription.value.trim(),
+                category: productCategory.value.trim(),
+                subcategory: productSubcategory.value.trim(),
+                imageUrl: productImageUrl.value.trim(),
+                unitPrice: parseFloat(unitPrice.value),
+                wholesalePrice: parseFloat(wholesalePrice.value) || 0, // Default to 0 if empty
+                wholesaleQuantity: parseInt(wholesaleQuantity.value) || 0, // Default to 0 if empty
+                stock: parseInt(productStock.value),
+            };
+
+            // Basic validation
+            if (!productData.name || !productData.category || isNaN(productData.unitPrice) || isNaN(productData.stock) || productData.unitPrice <= 0 || productData.stock < 0) {
+                showAlert("Error de Formulario", "Por favor, completa los campos requeridos (Nombre, Categoría, Precio Unitario, Stock) con valores válidos.", [{ text: "Entendido", action: "close" }]);
+                return;
+            }
+
+            try {
+                const productsCollectionRef = collection(db, `artifacts/${appId}/public/data/products`);
+                if (editingProductId) {
+                    // Update existing product
+                    const docRef = doc(productsCollectionRef, editingProductId);
+                    await updateDoc(docRef, productData);
+                    showAlert("Éxito", "Producto actualizado correctamente.", [{ text: "Entendido", action: "close" }]);
+                } else {
+                    // Add new product
+                    await addDoc(productsCollectionRef, productData);
+                    showAlert("Éxito", "Producto añadido correctamente.", [{ text: "Entendido", action: "close" }]);
+                }
+                toggleProductModal(false); // Close modal on success
+            } catch (e) {
+                console.error("Error saving product: ", e);
+                showAlert("Error de Firebase", "No se pudo guardar el producto. Inténtalo de nuevo.", [{ text: "Cerrar", action: "close" }]);
+            }
+        });
+
+        // --- Render Product Table ---
+        function renderProductTable(products) {
+            productTableBody.innerHTML = ''; // Clear existing rows
+            if (products.length === 0) {
+                noProductsMessage.classList.remove('hidden');
+                return;
+            }
+            noProductsMessage.classList.add('hidden');
+
+            products.forEach(product => {
+                const row = productTableBody.insertRow();
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${product.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.category}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$${formatPrice(product.unitPrice)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.wholesalePrice ? `$${formatPrice(product.wholesalePrice)}` : 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.wholesaleQuantity || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.stock}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="editProduct('${product.id}')" class="text-indigo-600 hover:text-indigo-900 mr-3">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button onclick="deleteProduct('${product.id}', '${product.name}')" class="text-red-600 hover:text-red-900">
+                            <i class="fas fa-trash"></i> Eliminar
+                        </button>
+                    </td>
+                `;
+            });
+        }
+
+        // --- Product Actions ---
+
+        window.editProduct = async function(productId) {
+            const productsCollectionRef = collection(db, `artifacts/${appId}/public/data/products`);
+            const docRef = doc(productsCollectionRef, productId);
+            try {
+                const productDoc = await getDoc(docRef);
+                if (productDoc.exists()) {
+                    const productData = productDoc.data();
+                    editingProductId = productId;
+                    modalTitle.textContent = "Editar Producto";
+                    productName.value = productData.name;
+                    productDescription.value = productData.description || '';
+                    productCategory.value = productData.category;
+                    productSubcategory.value = productData.subcategory || '';
+                    productImageUrl.value = productData.imageUrl || '';
+                    unitPrice.value = productData.unitPrice;
+                    wholesalePrice.value = productData.wholesalePrice || '';
+                    wholesaleQuantity.value = productData.wholesaleQuantity || '';
+                    productStock.value = productData.stock;
+                    toggleProductModal(true);
+                } else {
+                    showAlert("Error", "Producto no encontrado.", [{ text: "Entendido", action: "close" }]);
+                }
+            } catch (e) {
+                console.error("Error fetching product for edit: ", e);
+                showAlert("Error", "No se pudo cargar el producto para editar.", [{ text: "Cerrar", action: "close" }]);
+            }
+        };
+
+        window.deleteProduct = function(productId, productName) {
+            showAlert("Confirmar Eliminación", `¿Estás seguro de que quieres eliminar "${productName}"? Esta acción es irreversible.`, [
+                { text: "Cancelar", action: "close" },
+                { text: "Eliminar", action: "confirm", callback: async () => {
+                    try {
+                        const productsCollectionRef = collection(db, `artifacts/${appId}/public/data/products`);
+                        const docRef = doc(productsCollectionRef, productId);
+                        await deleteDoc(docRef);
+                        showAlert("Éxito", `Producto "${productName}" eliminado correctamente.`, [{ text: "Entendido", action: "close" }]);
+                    } catch (e) {
+                        console.error("Error deleting product: ", e);
+                        showAlert("Error", `No se pudo eliminar "${productName}".`, [{ text: "Cerrar", action: "close" }]);
+                    }
+                }}
+            ]);
+        };
+
+        // --- Price Formatting Function ---
+        function formatPrice(price) {
+            // Formats number with thousands separator and no decimal places for Argentine locale
+            return price.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        }
+    </script>
+</body>
+</html>

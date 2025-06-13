@@ -2,11 +2,10 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>Tu Supermercado Mayorista</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
@@ -104,6 +103,7 @@
             align-items: center;
             justify-content: center;
             border: 1px solid #cbd5e0; /* Light border */
+            flex-shrink: 0; /* Prevent shrinking when in a scrollable container */
         }
         .category-card:hover {
             background-color: #e2e8f0; /* Slightly darker on hover */
@@ -195,6 +195,14 @@
             .mobile-only {
                 display: block;
             }
+            /* Hide scrollbar for mobile categories */
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .scrollbar-hide {
+                -ms-overflow-style: none;  /* IE and Edge */
+                scrollbar-width: none;  /* Firefox */
+            }
         }
         @media (min-width: 768px) {
             .mobile-only {
@@ -262,15 +270,44 @@
             min-height: 480px; /* Increased min-height to accommodate more content and ensure vertical alignment */
         }
 
+        /* Container for product title and sort filter (New structure for alignment) */
+        .product-header-controls {
+            display: flex;
+            flex-direction: column; /* Stack on small screens */
+            justify-content: space-between;
+            align-items: center; /* Center items for single column */
+            margin-bottom: 1.5rem; /* Equivalent to mb-6 */
+        }
+        @media (min-width: 640px) { /* sm breakpoint */
+            .product-header-controls {
+                flex-direction: row; /* Row on larger screens */
+                align-items: center;
+            }
+        }
+
         /* Styles for the custom sort dropdown */
-        /* Removed previous custom CSS for .sort-dropdown-container to rely on Tailwind's absolute positioning */
+        .sort-dropdown-container {
+            position: relative; /* Essential for absolute positioning of dropdown content */
+            display: flex; /* Use flex for icon and button */
+            align-items: center;
+            gap: 0.5rem; /* Space between icon and button */
+            margin-top: 1rem; /* Space from title on mobile */
+        }
+        @media (min-width: 640px) { /* sm breakpoint */
+            .sort-dropdown-container {
+                margin-top: 0; /* No top margin on desktop */
+            }
+        }
 
         #sort-filter-toggle {
             cursor: pointer;
             outline: none;
-            width: 100%; /* Full width on mobile */
+            width: auto; /* Allow content to dictate width */
+            min-width: 150px; /* Maintain a minimum width for the button */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-        /* No specific desktop width for toggle button - auto width from flex container */
 
         #sort-filter-dropdown {
             position: absolute;
@@ -284,6 +321,7 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             z-index: 30; /* Ensure it's above other content */
         }
+
         /* Style for filter radio button labels */
         #sort-filter-dropdown label {
             padding: 0.5rem 1rem;
@@ -302,10 +340,8 @@
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
-    <!-- Notification Message -->
     <div id="notification-message" class="hidden"></div>
 
-    <!-- Top Bar (Header) -->
     <header class="bg-white shadow-md p-4 flex justify-between items-center relative z-20">
         <button class="hamburger" id="hamburger-menu">
             <span></span>
@@ -314,7 +350,6 @@
         </button>
         <h1 class="text-xl font-bold">Tu Supermercado Mayorista</h1>
         <div class="flex items-center space-x-4">
-            <!-- Search input and button -->
             <div class="relative flex items-center">
                 <button class="text-gray-600 hover:text-gray-900 focus:outline-none" id="search-toggle-button">
                     <i class="fas fa-search"></i>
@@ -324,7 +359,6 @@
                               opacity-0 pointer-events-none transition-all duration-300 ease-in-out
                               lg:static lg:translate-y-0 lg:w-auto lg:opacity-100 lg:pointer-events-auto lg:ml-4">
             </div>
-            <!-- Cart button -->
             <button class="text-gray-600 hover:text-gray-900 focus:outline-none" id="cart-button">
                 <i class="fas fa-shopping-cart"></i>
                 <span id="cart-count" class="bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center -ml-2 -mt-2 absolute top-4 right-4 sm:static">0</span>
@@ -332,7 +366,6 @@
         </div>
     </header>
 
-    <!-- Sidebar Navigation -->
     <nav class="sidebar" id="sidebar">
         <button class="close-btn" id="close-sidebar">&times;</button>
         <ul class="space-y-4 pt-10">
@@ -342,110 +375,96 @@
             <li class="border-t border-gray-200 pt-4 mt-4">
                 <h4 class="text-md font-semibold mb-2 text-gray-600">Categorías de Productos</h4>
                 <div id="sidebar-categories-list" class="space-y-2">
-                    <!-- Dynamic categories will be loaded here -->
-                </div>
+                    </div>
             </li>
             <li><a href="#" class="block text-lg font-semibold text-gray-700 hover:text-blue-600">Contacto</a></li>
             <li><a href="#" class="block text-lg font-semibold text-gray-700 hover:text-blue-600">Mi Cuenta</a></li>
+            <li class="border-t border-gray-200 pt-4 mt-4">
+                <button id="upload-products-btn" class="w-full bg-green-500 text-white py-2 rounded-md hover:bg-green-600 transition-colors duration-200 text-sm font-semibold">
+                    Cargar Productos Aleatorios (Firestore)
+                </button>
+            </li>
         </ul>
     </nav>
 
-    <!-- Overlay for sidebar -->
     <div class="overlay" id="overlay"></div>
 
     <main class="flex-grow">
-        <!-- Hero Banner Section -->
         <section class="hero-banner h-48 sm:h-64 md:h-80 flex items-center justify-center text-center p-4">
             <div class="container mx-auto">
-                <!-- <h2 class="text-3xl sm:text-4xl md:text-5xl font-bold mb-2">Grandes Ahorros, Compras al Por Mayor</h2>
-                <p class="text-lg sm:text-xl md:text-2xl">Todo lo que necesitas, a precios mayoristas.</p> -->
-            </div>
+                </div>
         </section>
 
-        <!-- Categories Section (Mobile - Pills) -->
         <section class="mobile-only p-4">
             <h3 class="text-xl font-semibold mb-4 text-center">Explora Nuestras Categorías</h3>
-            <div id="mobile-categories-container" class="flex flex-wrap justify-center gap-2">
-                <!-- Categories will be dynamically loaded here for mobile -->
-            </div>
+            <div id="mobile-categories-container" class="flex overflow-x-auto whitespace-nowrap justify-start gap-2 pb-2 scrollbar-hide">
+                </div>
         </section>
 
-        <!-- Categories Section (Desktop - Links) -->
         <section class="desktop-only p-4 bg-white shadow-sm">
             <div class="container mx-auto flex justify-center items-center overflow-x-auto whitespace-nowrap py-2 scrollbar-hide">
                 <nav class="flex space-x-1">
-                    <!-- Main categories will be dynamically loaded here for desktop -->
                     <div id="desktop-main-categories-container" class="flex"></div>
                 </nav>
             </div>
         </section>
 
-        <!-- Product Listing Section -->
-        <section class="p-4 sm:p-6 lg:p-8 relative"> <!-- Added relative to this section for absolute positioning of filter -->
+        <section class="p-4 sm:p-6 lg:p-8">
             <div class="container mx-auto">
-                <h3 id="product-section-title" class="text-2xl font-bold mb-6 text-center">Nuestros Productos</h3>
-
-                <!-- Subcategory pills for product filtering -->
-                <div id="subcategory-pills-container" class="flex flex-wrap justify-center gap-2 mb-6 hidden">
-                    <!-- Subcategory pills will be dynamically loaded here -->
-                </div>
-
-                <!-- Filter/Sort Dropdown - Positioned absolutely relative to the section -->
-                <div class="sort-dropdown-container absolute top-4 right-4 z-20">
-                    <button id="sort-filter-toggle" class="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm flex items-center justify-between">
-                        <span>Ordenar por: <span id="current-sort-display" class="font-normal text-gray-600">Defecto</span></span>
-                        <i class="fas fa-chevron-down ml-2 text-gray-500"></i>
-                    </button>
-
-                    <div id="sort-filter-dropdown" class="hidden">
-                        <div class="p-2">
-                            <label class="block cursor-pointer">
-                                <input type="radio" name="sortOrder" value="default" class="mr-2" onchange="setSortOrder(this.value)">
-                                <span>Por defecto</span>
-                            </label>
-                            <label class="block cursor-pointer">
-                                <input type="radio" name="sortOrder" value="alpha_asc" class="mr-2" onchange="setSortOrder(this.value)">
-                                <span>Alfabético (A-Z)</span>
-                            </label>
-                            <label class="block cursor-pointer">
-                                <input type="radio" name="sortOrder" value="alpha_desc" class="mr-2" onchange="setSortOrder(this.value)">
-                                <span>Alfabético (Z-A)</span>
-                            </label>
-                            <label class="block cursor-pointer">
-                                <input type="radio" name="sortOrder" value="price_asc" class="mr-2" onchange="setSortOrder(this.value)">
-                                <span>Precio (Menor a Mayor)</span>
-                            </label>
-                            <label class="block cursor-pointer">
-                                <input type="radio" name="sortOrder" value="price_desc" class="mr-2" onchange="setSortOrder(this.value)">
-                                <span>Precio (Mayor a Menor)</span>
-                            </label>
-                            <label class="block cursor-pointer">
-                                <input type="radio" name="sortOrder" value="discount_desc" class="mr-2" onchange="setSortOrder(this.value)">
-                                <span>Mejor Descuento</span>
-                            </label>
+                <div class="product-header-controls">
+                    <h3 id="product-section-title" class="text-2xl font-bold text-center sm:text-left mb-4 sm:mb-0">Nuestros Productos</h3>
+                    <div class="sort-dropdown-container">
+                        <i class="fas fa-sort text-gray-600 text-lg"></i> <button id="sort-filter-toggle" class="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm">
+                            <span>Ordenar por: <span id="current-sort-display" class="font-normal text-gray-600">Defecto</span></span>
+                            <i class="fas fa-chevron-down ml-2 text-gray-500"></i> </button>
+                        <div id="sort-filter-dropdown" class="absolute top-full right-0 mt-2 w-48 bg-white border border-gray-300 rounded-md shadow-lg z-30 hidden">
+                            <div class="p-2">
+                                <label class="block cursor-pointer py-1 px-3 hover:bg-gray-100">
+                                    <input type="radio" name="sortOrder" value="default" class="mr-2" onchange="setSortOrder(this.value)">
+                                    <span>Defecto</span>
+                                </label>
+                                <label class="block cursor-pointer py-1 px-3 hover:bg-gray-100">
+                                    <input type="radio" name="sortOrder" value="alpha_asc" class="mr-2" onchange="setSortOrder(this.value)">
+                                    <span>A-Z</span>
+                                </label>
+                                <label class="block cursor-pointer py-1 px-3 hover:bg-gray-100">
+                                    <input type="radio" name="sortOrder" value="alpha_desc" class="mr-2" onchange="setSortOrder(this.value)">
+                                    <span>Z-A</span>
+                                </label>
+                                <label class="block cursor-pointer py-1 px-3 hover:bg-gray-100">
+                                    <input type="radio" name="sortOrder" value="price_asc" class="mr-2" onchange="setSortOrder(this.value)">
+                                    <span>Precio Menor</span>
+                                </label>
+                                <label class="block cursor-pointer py-1 px-3 hover:bg-gray-100">
+                                    <input type="radio" name="sortOrder" value="price_desc" class="mr-2" onchange="setSortOrder(this.value)">
+                                    <span>Precio Mayor</span>
+                                </label>
+                                <label class="block cursor-pointer py-1 px-3 hover:bg-gray-100">
+                                    <input type="radio" name="sortOrder" value="discount_desc" class="mr-2" onchange="setSortOrder(this.value)">
+                                    <span>Descuento</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- This will display the filtered product grid -->
-                <!-- Added a margin-top to prevent overlap with the absolutely positioned filter -->
-                <div id="product-display-container" class="product-grid mt-16 md:mt-12">
-                    <!-- Products will be dynamically loaded here -->
-                </div>
-                <p id="no-products-message" class="text-center text-gray-500 hidden mt-8">No se encontraron productos que coincidan con tu búsqueda.</p>
+                <div id="subcategory-pills-container" class="flex flex-wrap justify-center gap-2 mb-6 hidden">
+                    </div>
+
+                <div id="product-display-container" class="product-grid">
+                    <p id="loading-products-message" class="text-center text-gray-500 col-span-full">Cargando productos...</p>
+                    </div>
+                <p id="no-products-message" class="text-center text-gray-500 hidden mt-8 col-span-full">No se encontraron productos que coincidan con tu búsqueda.</p>
                 <div id="view-more-products-container" class="mt-8 text-center">
-                    <!-- "VER TODOS LOS PRODUCTOS" or "VER MÁS PRODUCTOS" button will be added here conditionally -->
-                </div>
+                    </div>
             </div>
         </section>
     </main>
 
-    <!-- Floating Cart Button -->
     <button id="floating-cart-button" class="floating-cart-button">
         <i class="fas fa-shopping-cart"></i>
     </button>
 
-    <!-- Custom Modal for Cart Details & Checkout Process -->
     <div id="customModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white p-6 rounded-lg shadow-xl max-w-lg w-full mx-4">
             <div class="flex justify-between items-center mb-4">
@@ -453,29 +472,40 @@
                 <button id="closeModalBtn" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
             </div>
             <div id="modalBody" class="text-gray-700 mb-6 max-h-80 overflow-y-auto">
-                <!-- Content will be injected here -->
-            </div>
+                </div>
             <div id="modalFooter" class="flex justify-end space-x-4">
-                <!-- Buttons will be injected here -->
-            </div>
+                </div>
         </div>
     </div>
 
     <script type="module">
-        // Global variables for Firebase config and auth
+        // Variables globales para la configuración de Firebase y autenticación
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+        ? JSON.parse(__firebase_config) 
+        : 
+    {
+    apiKey: "AIzaSyDWxVB7bKW4JKbZSC2wab_M2Z6J6LnNBu8",
+    authDomain: "misuperappmayorista.firebaseapp.com",
+    projectId: "misuperappmayorista",
+    storageBucket: "misuperappmayorista.firebasestorage.app",
+    messagingSenderId: "926853864100",
+    appId: "1:926853864100:web:b825e3636bfaa1ea6da431",
+    measurementId: "G-DHCNRHC3NQ"};
 
-        // Import Firebase modules
+        // Importa los módulos de Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // Ya no se importan getFunctions o httpsCallable porque se eliminó la generación de descripción por IA.
 
         let app;
         let db;
         let auth;
-        let userId = 'anonymous'; // Default userId
+        let userId = 'anonymous'; // userId por defecto
+        let isAuthReady = false; // Bandera para indicar si el estado de autenticación está listo
 
+        let products = []; // Aquí se guardarán los productos obtenidos de Firestore
         let cart = [];
         const cartCountElement = document.getElementById('cart-count');
         const productListElement = document.getElementById('product-display-container');
@@ -485,173 +515,144 @@
         const notificationMessageElement = document.getElementById('notification-message');
         const productSectionTitle = document.getElementById('product-section-title');
         const noProductsMessage = document.getElementById('no-products-message');
-        const sidebarCategoriesList = document.getElementById('sidebar-categories-list'); // Element for sidebar categories
-        const viewMoreProductsContainer = document.getElementById('view-more-products-container'); // Container for "VER MÁS PRODUCTOS" button
+        const sidebarCategoriesList = document.getElementById('sidebar-categories-list'); // Elemento para las categorías de la barra lateral
+        const viewMoreProductsContainer = document.getElementById('view-more-products-container'); // Contenedor para el botón "VER MÁS PRODUCTOS"
+        const loadingProductsMessage = document.getElementById('loading-products-message'); // Mensaje de carga para productos
 
-        // Modal elements
+        // Elementos del modal
         const customModal = document.getElementById('customModal');
         const modalTitle = document.getElementById('modalTitle');
         const modalBody = document.getElementById('modalBody');
         const modalFooter = document.getElementById('modalFooter');
         const closeModalBtn = document.getElementById('closeModalBtn');
 
-        // Search elements
+        // Elementos de búsqueda
         const searchToggleButton = document.getElementById('search-toggle-button');
         const searchInput = document.getElementById('search-input');
         
-        // Filter elements
+        // Elementos de filtro (ordenar)
         const sortFilterToggle = document.getElementById('sort-filter-toggle');
         const sortFilterDropdown = document.getElementById('sort-filter-dropdown');
         const currentSortDisplay = document.getElementById('current-sort-display');
 
+        // Botón de carga de productos
+        const uploadProductsBtn = document.getElementById('upload-products-btn');
 
-        // Checkout state variables
+        // Variables de estado para el proceso de pago
         let checkoutData = {};
-        let currentStep = 0; // 0 for cart display, 1-4 for checkout steps
-        const totalSteps = 4; // Total number of checkout steps
+        let currentStep = 0; // 0 para la vista del carrito, 1-4 para los pasos de pago
+        const totalSteps = 4; // Número total de pasos del proceso de pago
 
-        // Global filter and pagination states
-        let activeCategory = 'Inicio'; // Default filter on load
-        let activeSubcategory = 'Todos'; // Default filter
-        let currentSearchQuery = ''; // Current search input value
-        let isDesktopCategoriesExpanded = false; // State to control category bar expansion on desktop
+        // Estados globales de filtro y paginación
+        let activeCategory = 'Inicio'; // Filtro predeterminado al cargar
+        let activeSubcategory = 'Todos'; // Filtro predeterminado
+        let currentSearchQuery = ''; // Valor actual del campo de búsqueda
+        let isDesktopCategoriesExpanded = false; // Estado para controlar la expansión de la barra de categorías en escritorio
 
-        let productsPerPage = 12; // Default for normal categories (3 rows * 4 columns)
-        let initialHomeAndBestsellersLimit = 8; // For 'Inicio' and 'Los más vendidos' (2 rows * 4 columns)
-        let bestsellersLimit = 4; // For 'Los más vendidos'
-        let currentProductsDisplayedCount = 0; // Tracks how many products are currently shown in the main section
+        let productsPerPage = 12; // Predeterminado para categorías normales (3 filas * 4 columnas)
+        let initialHomeAndBestsellersLimit = 8; // Para 'Inicio' y 'Los más vendidos' (2 filas * 4 columnas)
+        let bestsellersLimit = 4; // Para 'Los más vendidos'
+        let currentProductsDisplayedCount = 0; // Rastrea cuántos productos se muestran actualmente en la sección principal
         let currentSortOrder = 'default'; // 'default', 'alpha_asc', 'alpha_desc', 'price_asc', 'price_desc', 'discount_desc'
 
 
-        // Product data with wholesale and unit prices (expanded to ~50 products)
-        const products = [
-            { id: 'prod1', name: 'Aceite de Girasol', category: 'Aceites y Vinagres', subcategory: 'Aceites', imageUrl: 'https://placehold.co/300x200/FFD700/000000?text=Aceite+Girasol', unitPrice: 2500, wholesalePrice: 2000, wholesaleQuantity: 6, stock: 100, description: 'Aceite de girasol de primera calidad.' },
-            { id: 'prod2', name: 'Arroz Largo Fino', category: 'Comestibles', subcategory: 'Arroz y Legumbres', imageUrl: 'https://placehold.co/300x200/C0C0C0/000000?text=Arroz+Largo+Fino', unitPrice: 1200, wholesalePrice: 900, wholesaleQuantity: 10, stock: 200, description: 'Arroz de grano largo, ideal para guarniciones.' },
-            { id: 'prod3', name: 'Leche Entera Larga Vida', category: 'Lácteos y Frescos', subcategory: 'Leches', imageUrl: 'https://placehold.co/300x200/FFFFFF/000000?text=Leche+Entera+UHT', unitPrice: 1000, wholesalePrice: 750, wholesaleQuantity: 12, stock: 150, description: 'Leche UHT, pack familiar.' },
-            { id: 'prod4', name: 'Fideos Secos Tirabuzón', category: 'Comestibles', subcategory: 'Pastas', imageUrl: 'https://placehold.co/300x200/A52A2A/FFFFFF?text=Fideos+Tirabuzon', unitPrice: 800, wholesalePrice: 600, wholesaleQuantity: 15, stock: 300, description: 'Fideos de trigo candeal, cocción rápida.' },
-            { id: 'prod5', name: 'Detergente Líquido', category: 'Limpieza', subcategory: 'Lavandería', imageUrl: 'https://placehold.co/300x200/4682B4/FFFFFF?text=Detergente+Liquido', unitPrice: 3200, wholesalePrice: 2800, wholesaleQuantity: 4, stock: 80, description: 'Detergente concentrado para ropa.' },
-            { id: 'prod6', name: 'Jugo en Polvo Naranja', category: 'Bebidas', subcategory: 'Jugos', imageUrl: 'https://placehold.co/300x200/FFA500/FFFFFF?text=Jugo+Polvo+Naranja', unitPrice: 500, wholesalePrice: 350, wholesaleQuantity: 20, stock: 250, description: 'Rinde 1 litro, sabor naranja.' },
-            { id: 'prod7', name: 'Café Molido Clásico', category: 'Desayuno y Merienda', subcategory: 'Café', imageUrl: 'https://placehold.co/300x200/8B4513/FFFFFF?text=Cafe+Molido', unitPrice: 4000, wholesalePrice: 3500, wholesaleQuantity: 5, stock: 90, description: 'Café de tueste medio, aroma intenso.' },
-            { id: 'prod8', name: 'Gaseosa Cola', category: 'Bebidas', subcategory: 'Gaseosas', imageUrl: 'https://placehold.co/300x200/B22222/FFFFFF?text=Gaseosa+Cola+2L', unitPrice: 1800, wholesalePrice: 1400, wholesaleQuantity: 8, stock: 120, description: 'Refrescante bebida cola, 2.25L.' },
-            { id: 'prod9', name: 'Papel Higiénico', category: 'Limpieza', subcategory: 'Papel y Servilletas', imageUrl: 'https://placehold.co/300x200/ADD8E6/000000?text=Papel+Higienico', unitPrice: 5000, wholesalePrice: 4200, wholesaleQuantity: 3, stock: 70, description: 'Paquete de 6 rollos, doble hoja.' },
-            { id: 'prod10', name: 'Atún en Lata', category: 'Comestibles', subcategory: 'Enlatados', imageUrl: 'https://placehold.co/300x200/5F9EA0/FFFFFF?text=Atun+Enlatado', unitPrice: 1500, wholesalePrice: 1100, wholesaleQuantity: 10, stock: 110, description: 'Atún en aceite, alto en proteínas.' },
-            { id: 'prod11', name: 'Azúcar Refinada', category: 'Comestibles', subcategory: 'Endulzantes', imageUrl: 'https://placehold.co/300x200/F0F8FF/000000?text=Azucar+1kg', unitPrice: 900, wholesalePrice: 700, wholesaleQuantity: 10, stock: 180, description: 'Azúcar de caña, 1kg.' },
-            { id: 'prod12', name: 'Yerba Mate Suave', category: 'Desayuno y Merienda', subcategory: 'Yerba Mate', imageUrl: 'https://placehold.co/300x200/A0522D/FFFFFF?text=Yerba+Mate+Suave', unitPrice: 2800, wholesalePrice: 2200, wholesaleQuantity: 5, stock: 130, description: 'Yerba mate con bajo contenido de polvo.' },
-            { id: 'prod13', name: 'Harina de Trigo 000', category: 'Comestibles', subcategory: 'Harinas y Premezclas', imageUrl: 'https://placehold.co/300x200/F5DEB3/000000?text=Harina+Trigo+000', unitPrice: 700, wholesalePrice: 550, wholesaleQuantity: 12, stock: 250, description: 'Harina de trigo de fuerza, 1kg.' },
-            { id: 'prod14', name: 'Sal Fina Cocina', category: 'Comestibles', subcategory: 'Condimentos', imageUrl: 'https://placehold.co/300x200/F8F8F8/000000?text=Sal+Fina', unitPrice: 400, wholesalePrice: 300, wholesaleQuantity: 20, stock: 350, description: 'Sal de mesa, 500g.' },
-            { id: 'prod15', name: 'Pan de Molde Blanco', category: 'Panadería y Pastelería', subcategory: 'Panes', imageUrl: 'https://placehold.co/300x200/FFF8DC/000000?text=Pan+Molde', unitPrice: 1600, wholesalePrice: 1300, wholesaleQuantity: 6, stock: 60, description: 'Pan lactal fresco, 340g.' },
-            { id: 'prod16', name: 'Mermelada Durazno', category: 'Desayuno y Merienda', subcategory: 'Dulces y Mermeladas', imageUrl: 'https://placehold.co/300x200/FFDAB9/000000?text=Mermelada+Durazno', unitPrice: 1300, wholesalePrice: 1000, wholesaleQuantity: 8, stock: 95, description: 'Mermelada artesanal de durazno, 300g.' },
-            { id: 'prod17', name: 'Crema de Leche', category: 'Lácteos y Frescos', subcategory: 'Cremas y Untables', imageUrl: 'https://placehold.co/300x200/F5FFFA/000000?text=Crema+Leche', unitPrice: 1100, wholesalePrice: 900, wholesaleQuantity: 10, stock: 75, description: 'Crema de leche pasteurizada, 200ml.' },
-            { id: 'prod18', name: 'Lavandina Cloro', category: 'Limpieza', subcategory: 'Desinfectantes', imageUrl: 'https://placehold.co/300x200/E0FFFF/000000?text=Lavandina', unitPrice: 950, wholesalePrice: 750, wholesaleQuantity: 6, stock: 110, description: 'Lavandina concentrada, 1L.' },
-            { id: 'prod19', name: 'Alcohol en Gel', category: 'Limpieza', subcategory: 'Cuidado Personal', imageUrl: 'https://placehold.co/300x200/F0F8FF/000000?text=Alcohol+Gel', unitPrice: 1800, wholesalePrice: 1500, wholesaleQuantity: 5, stock: 85, description: 'Alcohol en gel antibacterial, 500ml.' },
-            { id: 'prod20', name: 'Mayonesa Clásica', category: 'Aderezos y Salsas', subcategory: 'Salsas Frías', imageUrl: 'https://placehold.co/300x200/FDF5E6/000000?text=Mayonesa', unitPrice: 1400, wholesalePrice: 1100, wholesaleQuantity: 8, stock: 140, description: 'Mayonesa tradicional, 250g.' },
-            { id: 'prod21', name: 'Ketchup Tomate', category: 'Aderezos y Salsas', subcategory: 'Salsas Frías', imageUrl: 'https://placehold.co/300x200/B22222/FFFFFF?text=Ketchup', unitPrice: 1300, wholesalePrice: 1000, wholesaleQuantity: 8, stock: 100, description: 'Salsa de tomate dulce, 300g.' },
-            { id: 'prod22', name: 'Galletas de Agua', category: 'Panadería y Pastelería', subcategory: 'Galletas', imageUrl: 'https://placehold.co/300x200/F5F5DC/000000?text=Galletas+Agua', unitPrice: 600, wholesalePrice: 450, wholesaleQuantity: 15, stock: 200, description: 'Galletas saladas para acompañar comidas.' },
-            { id: 'prod23', name: 'Queso Cremoso', category: 'Lácteos y Frescos', subcategory: 'Quesos', imageUrl: 'https://placehold.co/300x200/F0F8FF/000000?text=Queso+Cremoso', unitPrice: 4500, wholesalePrice: 3800, wholesaleQuantity: 3, stock: 50, description: 'Queso fresco para sándwiches o postres.' },
-            { id: 'prod24', name: 'Manteca sin Sal', category: 'Lácteos y Frescos', subcategory: 'Cremas y Untables', imageUrl: 'https://placehold.co/300x200/FFFFF0/000000?text=Manteca+Sin+Sal', unitPrice: 1800, wholesalePrice: 1500, wholesaleQuantity: 8, stock: 70, description: 'Manteca de primera calidad, 200g.' },
-            { id: 'prod25', name: 'Detergente para Platos', category: 'Limpieza', subcategory: 'Cocina', imageUrl: 'https://placehold.co/300x200/87CEEB/000000?text=Detergente+Platos', unitPrice: 1200, wholesalePrice: 950, wholesaleQuantity: 6, stock: 160, description: 'Detergente concentrado, 750ml.' },
-            { id: 'prod26', name: 'Esponja de Cocina', category: 'Limpieza', subcategory: 'Cocina', imageUrl: 'https://placehold.co/300x200/E6E6FA/000000?text=Esponja+Cocina', unitPrice: 300, wholesalePrice: 200, wholesaleQuantity: 12, stock: 300, description: 'Esponja doble cara para limpieza.' },
-            { id: 'prod27', name: 'Servilletas de Papel', category: 'Limpieza', subcategory: 'Papel y Servilletas', imageUrl: 'https://placehold.co/300x200/F8F8FF/000000?text=Servilletas+Papel', unitPrice: 800, wholesalePrice: 600, wholesaleQuantity: 10, stock: 150, description: 'Paquete de 100 servilletas.' },
-            { id: 'prod28', name: 'Vino Tinto Malbec', category: 'Bebidas', subcategory: 'Vinos', imageUrl: 'https://placehold.co/300x200/800000/FFFFFF?text=Vino+Malbec', unitPrice: 6000, wholesalePrice: 5000, wholesaleQuantity: 3, stock: 40, description: 'Vino tinto joven, 750ml.' },
-            { id: 'prod29', name: 'Cerveza Lager', category: 'Bebidas', subcategory: 'Cervezas', imageUrl: 'https://placehold.co/300x200/FFD700/000000?text=Cerveza+Lager', unitPrice: 1500, wholesalePrice: 1200, wholesaleQuantity: 6, stock: 90, description: 'Cerveza rubia clásica, lata 473ml.' },
-            { id: 'prod30', name: 'Galletas Dulces Variadas', category: 'Panadería y Pastelería', subcategory: 'Galletas', imageUrl: 'https://placehold.co/300x200/FAEBD7/000000?text=Galletas+Dulces', unitPrice: 900, wholesalePrice: 700, wholesaleQuantity: 10, stock: 180, description: 'Surtido de galletas dulces, 300g.' },
-            { id: 'prod31', name: 'Yogur Firme Vainilla', category: 'Lácteos y Frescos', subcategory: 'Yogures y Postres', imageUrl: 'https://placehold.co/300x200/F0FFF0/000000?text=Yogur+Vainilla', unitPrice: 700, wholesalePrice: 550, wholesaleQuantity: 12, stock: 140, description: 'Yogur cremoso sabor vainilla, 125g.' },
-            { id: 'prod32', name: 'Gaseosa Lima-Limón', category: 'Bebidas', subcategory: 'Gaseosas', imageUrl: 'https://placehold.co/300x200/ADFF2F/000000?text=Gaseosa+Lima-Limon', unitPrice: 1800, wholesalePrice: 1400, wholesaleQuantity: 8, stock: 100, description: 'Bebida gaseosa refrescante, 2.25L.' },
-            { id: 'prod33', name: 'Jugo de Naranja Brik', category: 'Bebidas', subcategory: 'Jugos', imageUrl: 'https://placehold.co/300x200/FFA500/FFFFFF?text=Jugo+Naranja+Brik', unitPrice: 1700, wholesalePrice: 1300, wholesaleQuantity: 6, stock: 90, description: 'Jugo de naranja natural, 1L.' },
-            { id: 'prod34', name: 'Papas Fritas Snacks', category: 'Snacks', subcategory: 'Papas Fritas', imageUrl: 'https://placehold.co/300x200/D2B48C/000000?text=Papas+Fritas', unitPrice: 1000, wholesalePrice: 800, wholesaleQuantity: 10, stock: 120, description: 'Papas fritas clásicas, 100g.' },
-            { id: 'prod35', name: 'Cereales de Maíz', category: 'Desayuno y Merienda', subcategory: 'Cereales', imageUrl: 'https://placehold.co/300x200/F5DEB3/000000?text=Cereales+Maiz', unitPrice: 2200, wholesalePrice: 1800, wholesaleQuantity: 6, stock: 70, description: 'Cereales de maíz tostado, 500g.' },
-            { id: 'prod36', name: 'Cacao en Polvo', category: 'Desayuno y Merienda', subcategory: 'Cereales', imageUrl: 'https://placehold.co/300x200/D2691E/FFFFFF?text=Cacao+Polvo', unitPrice: 1500, wholesalePrice: 1200, wholesaleQuantity: 8, stock: 80, description: 'Cacao instantáneo para leche.' },
-            { id: 'prod37', name: 'Sopa Instantánea Pollo', category: 'Comestibles', subcategory: 'Sopas y Caldos', imageUrl: 'https://placehold.co/300x200/F0F8FF/000000?text=Sopa+Pollo', unitPrice: 400, wholesalePrice: 300, wholesaleQuantity: 15, stock: 250, description: 'Sopa deshidratada sabor pollo.' },
-            { id: 'prod38', name: 'Gelatina Frutilla', category: 'Postres', subcategory: 'Gelatinas', imageUrl: 'https://placehold.co/300x200/FF6347/FFFFFF?text=Gelatina+Frutilla', unitPrice: 350, wholesalePrice: 250, wholesaleQuantity: 20, stock: 300, description: 'Postre de gelatina sabor frutilla.' },
-            { id: 'prod39', name: 'Cebolla Fresca', category: 'Frutas y Verduras', subcategory: 'Verduras', imageUrl: 'https://placehold.co/300x200/FFE4B5/000000?text=Cebolla+Fresca', unitPrice: 600, wholesalePrice: 400, wholesaleQuantity: 5, stock: 100, description: 'Cebollas grandes, por kg.' },
-            { id: 'prod40', name: 'Manzana Roja', category: 'Frutas y Verduras', subcategory: 'Frutas', imageUrl: 'https://placehold.co/300x200/FF0000/FFFFFF?text=Manzana+Roja', unitPrice: 900, wholesalePrice: 700, wholesaleQuantity: 6, stock: 80, description: 'Manzanas frescas y jugosas, por kg.' },
-            { id: 'prod41', name: 'Agua Mineral sin Gas', category: 'Bebidas', subcategory: 'Aguas', imageUrl: 'https://placehold.co/300x200/ADD8E6/000000?text=Agua+Sin+Gas', unitPrice: 500, wholesalePrice: 400, wholesaleQuantity: 12, stock: 200, description: 'Agua purificada, 1.5L.' },
-            { id: 'prod42', name: 'Agua Mineral con Gas', category: 'Bebidas', subcategory: 'Aguas', imageUrl: 'https://placehold.co/300x200/ADD8E6/000000?text=Agua+Con+Gas', unitPrice: 550, wholesalePrice: 450, wholesaleQuantity: 12, stock: 180, description: 'Agua con burbujas, 1.5L.' },
-            { id: 'prod43', name: 'Pañales para Bebé', category: 'Bebés y Niños', subcategory: 'Pañales', imageUrl: 'https://placehold.co/300x200/E0FFFF/000000?text=Pañales+Beb%C3%A9', unitPrice: 8000, wholesalePrice: 7000, wholesaleQuantity: 2, stock: 30, description: 'Pañales ultra absorbentes, pack grande.' },
-            { id: 'prod44', name: 'Toallitas Húmedas', category: 'Bebés y Niños', subcategory: 'Cuidado del Bebé', imageUrl: 'https://placehold.co/300x200/F0F8FF/000000?text=Toallitas+Humedas', unitPrice: 1500, wholesalePrice: 1200, wholesaleQuantity: 5, stock: 100, description: 'Toallitas húmedas hipoalergénicas.' },
-            { id: 'prod45', name: 'Champú para Cabello', category: 'Cuidado Personal', subcategory: 'Cuidado del Cabello', imageUrl: 'https://placehold.co/300x200/B0E0E6/000000?text=Champ%C3%BA', unitPrice: 2500, wholesalePrice: 2000, wholesaleQuantity: 4, stock: 60, description: 'Champú hidratante, 400ml.' },
-            { id: 'prod46', name: 'Acondicionador', category: 'Cuidado Personal', subcategory: 'Cuidado del Cabello', imageUrl: 'https://placehold.co/300x200/B0E0E6/000000?text=Acondicionador', unitPrice: 2500, wholesalePrice: 2000, wholesaleQuantity: 4, stock: 60, description: 'Acondicionador para todo tipo de cabello, 400ml.' },
-            { id: 'prod47', name: 'Pasta Dental', category: 'Cuidado Personal', subcategory: 'Higiene Bucal', imageUrl: 'https://placehold.co/300x200/F8F8FF/000000?text=Pasta+Dental', unitPrice: 1000, wholesalePrice: 800, wholesaleQuantity: 8, stock: 150, description: 'Pasta dental con flúor, 90g.' },
-            { id: 'prod48', name: 'Cepillo de Dientes', category: 'Cuidado Personal', subcategory: 'Higiene Bucal', imageUrl: 'https://placehold.co/300x200/F8F8FF/000000?text=Cepillo+Dientes', unitPrice: 600, wholesalePrice: 450, wholesaleQuantity: 10, stock: 200, description: 'Cepillo de dientes de cerdas suaves.' },
-            { id: 'prod49', name: 'Jabón de Tocador', category: 'Cuidado Personal', subcategory: 'Higiene Corporal', imageUrl: 'https://placehold.co/300x200/FFE4E1/000000?text=Jab%C3%B3n+Tocador', unitPrice: 400, wholesalePrice: 300, wholesaleQuantity: 12, stock: 220, description: 'Jabón en barra, aroma floral.' },
-            { id: 'prod50', name: 'Desodorante Aerosol', category: 'Cuidado Personal', subcategory: 'Higiene Corporal', imageUrl: 'https://placehold.co/300x200/E0FFFF/000000?text=Desodorante', unitPrice: 1800, wholesalePrice: 1400, wholesaleQuantity: 6, stock: 90, description: 'Desodorante antitranspirante, 150ml.' }
-        ];
-
-        // Log the total number of products to confirm
-        console.log("Total products available:", products.length);
-
-        // Extract unique categories and subcategories
-        const allProductCategories = [...new Set(products.map(p => p.category))].sort(); // Store original sorted list
-        const subcategories = [...new Set(products.map(p => p.subcategory))];
-
-        // --- Firebase Initialization and Authentication ---
+        // --- Inicialización y Autenticación de Firebase ---
         window.onload = async function() {
             try {
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
 
-                // Sign in anonymously or with custom token
+                // Iniciar sesión de forma anónima o con un token personalizado
                 if (typeof __initial_auth_token !== 'undefined') {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
                     await signInAnonymously(auth);
                 }
 
-                // Listen for auth state changes
+                // Escuchar cambios en el estado de autenticación
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
-                        userId = user.uid; // Update userId
+                        userId = user.uid; // Actualizar userId
                         console.log("Firebase user authenticated:", userId);
-                        // Fetch cart data after authentication
-                        setupCartListener(userId);
                     } else {
-                        userId = crypto.randomUUID(); // Anonymous user ID
+                        userId = crypto.randomUUID(); // ID de usuario anónimo
                         console.log("Firebase user is anonymous:", userId);
-                        setupCartListener(userId); // Still set up listener for anonymous user
                     }
+                    isAuthReady = true; // El estado de autenticación está listo
+                    // Ahora es seguro configurar los listeners de Firestore
+                    setupCartListener(userId);
+                    setupProductsListener(); // Escuchar los datos de productos de Firestore
                 });
 
-                // Initial display of elements
+                // Visualización inicial de elementos (se actualizará una vez que los productos se carguen de Firestore)
                 displayCategories();
-                renderProductsBasedOnFiltersAndSearch(); // Initial display: 'Inicio' products
-                updateSortDisplay(); // Initialize sort display text
+                updateSortDisplay(); // Inicializar el texto de visualización de ordenación
 
             } catch (error) {
                 console.error("Error initializing Firebase or signing in:", error);
-                // Fallback: display products without Firebase if error occurs
+                // Fallback: mostrar productos sin Firebase si ocurre un error
                 displayCategories();
-                renderProductsBasedOnFiltersAndSearch(); // Initial display: 'Inicio' products
-                updateSortDisplay(); // Initialize sort display text
+                updateSortDisplay(); // Inicializar el texto de visualización de ordenación
                 showModal("Error de Conexión", "No se pudo conectar con los servicios de Firebase. Algunas funcionalidades pueden no estar disponibles.", [{ text: "Entendido", action: "close" }]);
             }
         };
 
-        // --- Firebase Cart Listener ---
+        // --- Listener de Carrito de Firebase ---
         function setupCartListener(currentUserId) {
+            // Asegúrate de que el userId no sea 'anonymous' y la base de datos esté lista
+            if (!db || !currentUserId || currentUserId === 'anonymous') {
+                console.warn("Firestore o User ID no están listos para el carrito.");
+                return;
+            }
             const cartCollectionRef = collection(db, `artifacts/${appId}/users/${currentUserId}/cart`);
             onSnapshot(cartCollectionRef, (snapshot) => {
                 cart = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 updateCartCount();
                 console.log("Cart updated from Firestore:", cart);
-                // If cart modal is open and it's the cart view, refresh its content
+                // Si el modal del carrito está abierto y es la vista del carrito, actualizar su contenido
                 if (!customModal.classList.contains('hidden') && currentStep === 0) {
                     displayCartContents();
                 }
             }, (error) => {
                 console.error("Error listening to cart changes:", error);
-                showModal("Error del Carrito", "No se pudieron cargar los datos del carrito en tiempo real.", [{ text: "Cerrar", action: "close" }]);
+                showModal("Error del Carrito", `No se pudieron cargar los datos del carrito en tiempo real. Error: ${error.message}`, [{ text: "Cerrar", action: "close" }]);
+            });
+        }
+
+        // --- Listener de Productos de Firebase ---
+        function setupProductsListener() {
+            if (!db || !isAuthReady) {
+                console.warn("Firestore o Auth no listos, no se puede configurar el listener de productos.");
+                return;
+            }
+            loadingProductsMessage.classList.remove('hidden');
+            const productsCollectionRef = collection(db, `artifacts/${appId}/public/data/products`);
+            onSnapshot(productsCollectionRef, (snapshot) => {
+                products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log("Products loaded from Firestore:", products.length);
+                // Recalcular categorías y subcategorías basadas en los productos obtenidos
+                allProductCategories = [...new Set(products.map(p => p.category))].sort();
+                // Asegúrate de que subcategories también se extraiga de forma robusta
+                subcategories = [...new Set(products.flatMap(p => p.subcategory ? [p.subcategory] : []))];
+                displayCategories(); // Actualizar categorías en la UI
+                renderProductsBasedOnFiltersAndSearch(); // Renderizar productos una vez cargados
+                loadingProductsMessage.classList.add('hidden'); // Ocultar mensaje de carga
+            }, (error) => {
+                console.error("Error listening to products changes:", error);
+                showModal("Error de Productos", "No se pudieron cargar los productos en tiempo real. Por favor, recarga la página.", [{ text: "Cerrar", action: "close" }]);
+                loadingProductsMessage.classList.add('hidden'); // Ocultar mensaje de carga incluso si hay error
             });
         }
 
 
-        // --- UI Helper Functions ---
+        // --- Funciones Auxiliares de UI ---
 
-        // Generic modal show function (used for confirmations and errors)
+        // Función genérica para mostrar modales (utilizada para confirmaciones y errores)
         function showModal(title, bodyHtml, buttons) {
             modalTitle.innerHTML = title;
             modalBody.innerHTML = bodyHtml;
-            modalFooter.innerHTML = ''; // Clear previous buttons
+            modalFooter.innerHTML = ''; // Limpiar botones anteriores
 
             buttons.forEach(btn => {
                 const buttonElement = document.createElement('button');
@@ -663,15 +664,15 @@
                 } else if (btn.action === 'confirm') {
                     buttonElement.classList.add('bg-blue-600', 'text-white', 'hover:bg-blue-700');
                     buttonElement.onclick = () => {
-                        btn.callback(); // Execute callback
-                        customModal.classList.add('hidden'); // Close after action
+                        btn.callback(); // Ejecutar callback
+                        customModal.classList.add('hidden'); // Cerrar después de la acción
                     };
                 } else if (btn.action === 'custom') {
-                    // Applied text-white for custom buttons as requested
+                    // Aplicar text-white para botones personalizados según lo solicitado
                     buttonElement.classList.add(btn.className || 'bg-blue-600', btn.color || 'text-white', btn.hover || 'hover:bg-blue-700');
                     buttonElement.onclick = () => {
                         if (btn.callback) btn.callback();
-                        // Modal does not close by default for custom actions, unless callback handles it
+                        // El modal no se cierra por defecto para acciones personalizadas, a menos que el callback lo maneje
                     };
                 }
                 modalFooter.appendChild(buttonElement);
@@ -680,13 +681,13 @@
             customModal.classList.remove('hidden');
         }
 
-        // Close modal button listener
+        // Listener del botón para cerrar el modal
         closeModalBtn.addEventListener('click', () => {
             customModal.classList.add('hidden');
-            currentStep = 0; // Reset checkout process if modal is closed manually
+            currentStep = 0; // Reiniciar el proceso de pago if the modal is closed manually
         });
 
-        // Function to show temporary notifications
+        // Función para mostrar notificaciones temporales
         function showNotification(message, type = 'info') {
             notificationMessageElement.textContent = message;
             notificationMessageElement.classList.remove('hidden', 'bg-red-200', 'text-red-800', 'bg-green-200', 'text-green-800', 'bg-blue-200', 'text-blue-800');
@@ -699,25 +700,28 @@
                 notificationMessageElement.classList.add('bg-blue-200', 'text-blue-800');
             }
 
-            // Trigger show animation
+            // Activar la animación de mostrar
             notificationMessageElement.classList.add('show');
 
             setTimeout(() => {
-                // Trigger hide animation
+                // Activar la animación de ocultar
                 notificationMessageElement.classList.remove('show');
                 setTimeout(() => {
-                    notificationMessageElement.classList.add('hidden'); // Fully hide after transition
-                }, 300); // Match transition duration
-            }, 1000); // Display for 1 second
+                    notificationMessageElement.classList.add('hidden'); // Ocultar completamente después de la transición
+                }, 300); // Coincidir con la duración de la transición
+            }, 1000); // Mostrar durante 1 segundo
         }
 
 
-        // --- Category Display ---
+        // --- Visualización de Categorías ---
+        let allProductCategories = []; // Se poblará desde Firestore
+        let subcategories = []; // Se poblará desde Firestore
+
         function displayCategories() {
             const specialCategories = ['Inicio', 'Los más vendidos'];
             const allCategoriesForMobileDisplay = [...specialCategories, ...allProductCategories, 'Todos'];
 
-            // Mobile Categories (Pills)
+            // Categorías para móvil (Pills)
             mobileCategoriesContainer.innerHTML = '';
             allCategoriesForMobileDisplay.forEach(category => {
                 const button = document.createElement('button');
@@ -727,7 +731,7 @@
                 mobileCategoriesContainer.appendChild(button);
             });
 
-            // Desktop Main Categories (Links)
+            // Categorías principales de escritorio (Enlaces)
             desktopMainCategoriesContainer.innerHTML = '';
             let categoriesToDisplayInDesktopNav = [];
 
@@ -744,7 +748,7 @@
                 link.className = `main-category-link ${activeCategory === category ? 'active' : ''}`;
                 link.onclick = (e) => {
                     e.preventDefault();
-                    isDesktopCategoriesExpanded = false; // Collapse when a specific category is chosen
+                    isDesktopCategoriesExpanded = false; // Colapsar cuando se elige una categoría específica
                     filterProductsByCategory(category);
                 };
                 desktopMainCategoriesContainer.appendChild(link);
@@ -756,7 +760,7 @@
                 }
             });
 
-            // Add 'Ver Más Categorías' button if not already expanded and there are more product categories
+            // Agregar botón 'Ver Más Categorías' si no está expandido y hay más categorías de productos
             if (!isDesktopCategoriesExpanded && allProductCategories.length > 3) {
                 if (categoriesToDisplayInDesktopNav.length > 0) {
                     const separator = document.createElement('span');
@@ -771,15 +775,15 @@
                 link.onclick = (e) => {
                     e.preventDefault();
                     isDesktopCategoriesExpanded = true;
-                    displayCategories(); // Re-render to show all desktop categories
+                    displayCategories(); // Volver a renderizar para mostrar todas las categorías de escritorio
                 };
                 desktopMainCategoriesContainer.appendChild(link);
             }
 
 
-            // Sidebar Categories List
+            // Lista de Categorías de la barra lateral
             sidebarCategoriesList.innerHTML = '';
-            const visibleSidebarCategories = allProductCategories.slice(0, 5); // Show first 5 categories in sidebar
+            const visibleSidebarCategories = allProductCategories.slice(0, 5); // Mostrar las primeras 5 categorías en la barra lateral
             visibleSidebarCategories.forEach(category => {
                 const listItem = document.createElement('li');
                 listItem.innerHTML = `<a href="#" class="block text-md font-medium text-gray-700 hover:text-blue-600" onclick="filterProductsByCategory('${category}'); closeSidebar();">${category}</a>`;
@@ -792,13 +796,13 @@
             }
         }
 
-        window.closeSidebar = function() { // Made global for onclick in HTML
+        window.closeSidebar = function() { // Hecho global para onclick en HTML
             document.getElementById('sidebar').classList.remove('open');
             document.getElementById('overlay').style.display = 'none';
             document.getElementById('hamburger-menu').classList.remove('open');
         }
 
-        // --- Subcategory Display ---
+        // --- Visualización de Subcategorías ---
         function displaySubcategories() {
             subcategoryPillsContainer.innerHTML = '';
             let filteredSubcategories = [];
@@ -825,68 +829,72 @@
             });
         }
 
-        // --- Price Formatting Function ---
+        // --- Función de Formato de Precios ---
         function formatPrice(price) {
-            // Formats number with thousands separator and no decimal places for Argentine locale
-            return price.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            // Verifica si price es un número válido. Si no lo es, devuelve un mensaje o un valor por defecto.
+            if (typeof price === 'number' && !isNaN(price)) {
+                return price.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            } else {
+                // Loguea una advertencia en la consola, pero no rompe la UI
+                console.warn("Advertencia: El precio del producto no es un número válido y no se puede formatear:", price);
+                return "N/A"; // Retorna un valor por defecto para no romper la interfaz
+            }
         }
 
-        // --- Product Display ---
+        // --- Visualización de Productos ---
         function displayProducts(productsToDisplay) {
-            productListElement.innerHTML = ''; // Clear previous content
-            noProductsMessage.classList.add('hidden'); // Hide no products message by default
+            productListElement.innerHTML = ''; // Limpiar contenido anterior
+            noProductsMessage.classList.add('hidden'); // Ocultar mensaje de no productos por defecto
 
-            if (productsToDisplay.length === 0) {
+            if (productsToDisplay.length === 0 && !loadingProductsMessage.classList.contains('hidden')) {
+                // Si no hay productos y el mensaje de carga es visible, no mostrar el mensaje de "no productos" todavía
+                return;
+            } else if (productsToDisplay.length === 0) {
                 productListElement.innerHTML = '';
                 noProductsMessage.classList.remove('hidden');
                 return;
             }
 
-            productListElement.classList.add('product-grid'); // Ensure grid class is present
+            productListElement.classList.add('product-grid'); // Asegurar que la clase de cuadrícula esté presente
 
             productsToDisplay.forEach(product => {
                 const productInCart = cart.find(item => item.productId === product.id);
                 const quantityInCart = productInCart ? productInCart.quantity : 0;
 
                 const productCard = document.createElement('div');
-                // Use flex-col and justify-between to push content to bottom
+                // Usar flex-col y justify-between para empujar el contenido hacia abajo
                 productCard.className = `bg-white rounded-lg shadow-md overflow-hidden transform transition duration-300 hover:scale-105 flex flex-col product-card-item max-w-sm`;
                 productCard.innerHTML = `
                     <img src="${product.imageUrl}" alt="${product.name}" class="w-full h-48 object-cover">
                     <div class="p-4 flex-grow flex flex-col justify-between">
                         <div>
                             <h4 class="text-lg font-semibold text-gray-800 mb-2">${product.name}</h4>
-                            <p class="text-gray-600 text-sm mb-3 h-10 overflow-hidden line-clamp-2">${product.description}</p>
-                            <!-- Use h-10 and line-clamp-2 for consistent description height -->
+                            <p class="text-gray-600 text-sm mb-3 h-10 overflow-hidden line-clamp-2">${product.description || 'Descripción no disponible.'}</p>
                         </div>
                         <div>
                             <div class="flex flex-col mb-4">
-                                <!-- Wholesale Price Display -->
                                 <div class="flex items-baseline">
-                                    <span class="product-price-display" id="wholesale-price-${product.id}">
-                                        $${formatPrice(product.wholesalePrice)}
+                                    <span class="product-price-display" id="wholesale-price-display-${product.id}">
+                                        $${formatPrice(product.wholesalePrice || 0)}
                                     </span>
                                     <span class="ml-2 text-sm text-gray-500" id="wholesale-note-${product.id}">
                                         Mayorista
                                     </span>
                                 </div>
 
-                                <!-- Unit Price Display -->
                                 <div class="flex items-baseline mt-1">
-                                    <span class="product-price-display" id="unit-price-${product.id}">
-                                        $${formatPrice(product.unitPrice)}
+                                    <span class="product-price-display" id="unit-price-display-${product.id}">
+                                        $${formatPrice(product.unitPrice || 0)}
                                     </span>
                                     <span class="ml-2 text-sm text-gray-500" id="unit-note-${product.id}">
                                         por unidad
                                     </span>
                                 </div>
 
-                                <!-- Dynamic Price Message -->
                                 <p id="price-message-${product.id}" class="text-sm mt-2"></p>
 
-                                <!-- Wholesale Quantity Minimum -->
                                 <p class="text-xs text-gray-700 mt-2">
-                                    <span class="font-semibold">Mayorista:</span> a partir de ${product.wholesaleQuantity} unidades.
+                                    <span class="font-semibold">Mayorista:</span> a partir de ${product.wholesaleQuantity || 0} unidades.
                                 </p>
                             </div>
                             <div class="flex items-center justify-between mt-auto">
@@ -907,15 +915,15 @@
             });
         }
 
-        // --- Filtering and Sorting Logic ---
+        // --- Lógica de Filtrado y Ordenación ---
         function filterProductsByCategory(category) {
             currentSearchQuery = '';
             searchInput.value = '';
             activeSubcategory = 'Todos';
             activeCategory = category;
-            isDesktopCategoriesExpanded = false; // Collapse desktop categories on category change
+            isDesktopCategoriesExpanded = false; // Colapsar categorías de escritorio al cambiar de categoría
 
-            resetPagination(); // Reset pagination when category changes
+            resetPagination(); // Reiniciar paginación al cambiar de categoría
             displayCategories();
             displaySubcategories();
             renderProductsBasedOnFiltersAndSearch();
@@ -925,30 +933,30 @@
             activeSubcategory = subcategory;
             currentSearchQuery = '';
             searchInput.value = '';
-            resetPagination(); // Reset pagination when subcategory changes
+            resetPagination(); // Reiniciar paginación al cambiar de subcategoría
             displaySubcategories();
             renderProductsBasedOnFiltersAndSearch();
         }
 
         window.setSortOrder = function(order) {
             currentSortOrder = order;
-            updateSortDisplay(); // Update the text in the summary tag
-            resetPagination(); // Reset pagination when sort order changes
+            updateSortDisplay(); // Actualizar el texto en la etiqueta de resumen
+            resetPagination(); // Reiniciar paginación al cambiar el orden de clasificación
             renderProductsBasedOnFiltersAndSearch();
-            sortFilterDropdown.classList.add('hidden'); // Close dropdown after selection
+            sortFilterDropdown.classList.add('hidden'); // Cerrar el menú desplegable después de la selección
         }
 
         function updateSortDisplay() {
             let displayText = 'Defecto';
             switch (currentSortOrder) {
-                case 'alpha_asc': displayText = 'Alfabético (A-Z)'; break;
-                case 'alpha_desc': displayText = 'Alfabético (Z-A)'; break;
-                case 'price_asc': displayText = 'Precio (Menor a Mayor)'; break;
-                case 'price_desc': displayText = 'Precio (Mayor a Menor)'; break;
-                case 'discount_desc': displayText = 'Mejor Descuento'; break;
+                case 'alpha_asc': displayText = 'A-Z'; break;
+                case 'alpha_desc': displayText = 'Z-A'; break;
+                case 'price_asc': displayText = 'Precio Menor'; break;
+                case 'price_desc': displayText = 'Precio Mayor'; break;
+                case 'discount_desc': displayText = 'Descuento'; break;
             }
             currentSortDisplay.textContent = displayText;
-            // Also ensure the radio button is checked
+            // Asegurarse de que el botón de radio esté marcado
             const radio = document.querySelector(`input[name="sortOrder"][value="${currentSortOrder}"]`);
             if (radio) {
                 radio.checked = true;
@@ -957,54 +965,56 @@
 
 
         function resetPagination() {
-            currentProductsDisplayedCount = 0; // Reset to show initial batch
+            currentProductsDisplayedCount = 0; // Reiniciar para mostrar el lote inicial
         }
 
         function renderProductsBasedOnFiltersAndSearch() {
             let filteredProducts = products;
             let sectionTitle = "Nuestros Productos";
-            let limitForDisplay = null; // No limit by default for normal categories
+            let limitForDisplay = null; // Sin límite por defecto para categorías normales
             
-            // 1. Apply Search Filter
+            // 1. Aplicar filtro de búsqueda
             if (currentSearchQuery) {
                 filteredProducts = products.filter(p => p.name.toLowerCase().includes(currentSearchQuery.toLowerCase()) ||
-                                               p.description.toLowerCase().includes(currentSearchQuery.toLowerCase()));
+                                               (p.description || '').toLowerCase().includes(currentSearchQuery.toLowerCase())); // Safe access to description
                 sectionTitle = `Resultados para "${currentSearchQuery}"`;
-                // Subcategories hidden when searching
+                // Subcategorías ocultas al buscar
                 subcategoryPillsContainer.classList.add('hidden');
             } else {
-                // 2. Apply Category/Subcategory Filter
+                // 2. Aplicar filtro de Categoría/Subcategoría
                 if (activeCategory === 'Inicio') {
-                    // For Inicio, show a limited number of products
-                    filteredProducts = products; // Start with all products to then limit
+                    // Para Inicio, mostrar un número limitado de productos
+                    filteredProducts = products; // Empezar con todos los productos para luego limitar
                     sectionTitle = "Bienvenido";
-                    limitForDisplay = initialHomeAndBestsellersLimit; // Limit to 8 for initial display
+                    limitForDisplay = initialHomeAndBestsellersLimit; // Limitar a 8 para la visualización inicial
                     subcategoryPillsContainer.classList.add('hidden');
                 } else if (activeCategory === 'Los más vendidos') {
-                    // For Los más vendidos, show a limited number of products
-                    filteredProducts = products.slice(0, bestsellersLimit); // Limit to 4 for bestsellers
+                    // Para Los más vendidos, mostrar un número limitado de productos
+                    // Aquí asumimos que los "más vendidos" son los primeros X productos en el array 'products'
+                    // En una app real, esto se determinaría por un campo 'salesCount' o similar en Firestore
+                    filteredProducts = products.slice(0, bestsellersLimit); 
                     sectionTitle = "Los Más Vendidos";
-                    limitForDisplay = bestsellersLimit; // Explicitly limit to 4 for this section
+                    limitForDisplay = bestsellersLimit; // Limitar explícitamente a 4 para esta sección
                     subcategoryPillsContainer.classList.add('hidden');
                 } else if (activeCategory === 'Todos') {
-                    // 'Todos' category explicitly selected (shows ALL products)
+                    // Categoría 'Todos' seleccionada explícitamente (muestra TODOS los productos)
                     filteredProducts = products;
                     sectionTitle = "Todos Nuestros Productos";
                     subcategoryPillsContainer.classList.add('hidden');
                 } else {
-                    // A specific product category is selected
+                    // Se selecciona una categoría de producto específica
                     filteredProducts = filteredProducts.filter(p => p.category === activeCategory);
                     sectionTitle = `Productos en ${activeCategory}`;
                     if (activeSubcategory !== 'Todos') {
                         filteredProducts = filteredProducts.filter(p => p.subcategory === activeSubcategory);
                         sectionTitle += ` > ${activeSubcategory}`;
                     }
-                    displaySubcategories(); // Re-render subcategories (will show if category selected)
+                    displaySubcategories(); // Volver a renderizar subcategorías (se mostrarán si se selecciona la categoría)
                 }
             }
             
-            // 3. Apply Sorting
-            let sortedProducts = [...filteredProducts]; // Create a copy to sort
+            // 3. Aplicar ordenación
+            let sortedProducts = [...filteredProducts]; // Crear una copia para ordenar
             switch (currentSortOrder) {
                 case 'alpha_asc':
                     sortedProducts.sort((a, b) => a.name.localeCompare(b.name));
@@ -1013,55 +1023,47 @@
                     sortedProducts.sort((a, b) => b.name.localeCompare(a.name));
                     break;
                 case 'price_asc':
-                    sortedProducts.sort((a, b) => {
-                        const priceA = a.quantity >= a.wholesaleQuantity ? a.wholesalePrice : a.unitPrice;
-                        const priceB = b.quantity >= b.wholesaleQuantity ? b.wholesalePrice : b.unitPrice;
-                        return priceA - priceB;
-                    });
+                    sortedProducts.sort((a, b) => (a.unitPrice || 0) - (b.unitPrice || 0));
                     break;
                 case 'price_desc':
-                    sortedProducts.sort((a, b) => {
-                        const priceA = a.quantity >= a.wholesaleQuantity ? a.wholesalePrice : a.unitPrice;
-                        const priceB = b.quantity >= b.wholesaleQuantity ? b.wholesalePrice : b.unitPrice;
-                        return priceB - priceA;
-                    });
+                    sortedProducts.sort((a, b) => (b.unitPrice || 0) - (a.unitPrice || 0));
                     break;
                 case 'discount_desc':
-                    // Calculate discount: assuming unitPrice - wholesalePrice is the discount
+                    // Calcular descuento: (precio unitario - precio mayorista) por unidad
                     sortedProducts.sort((a, b) => {
-                        const discountA = a.unitPrice - a.wholesalePrice;
-                        const discountB = b.unitPrice - b.wholesalePrice;
-                        return discountB - discountA; // Descending order for best discount
+                        const discountA = (a.unitPrice || 0) - (a.wholesalePrice !== undefined && a.wholesalePrice !== null ? a.wholesalePrice : (a.unitPrice || 0));
+                        const discountB = (b.unitPrice || 0) - (b.wholesalePrice !== undefined && b.wholesalePrice !== null ? b.wholesalePrice : (b.unitPrice || 0));
+                        return discountB - discountA; // Orden descendente para el mejor descuento
                     });
                     break;
                 case 'default':
                 default:
-                    // No specific sort, keep original order or default order from data
+                    // Sin ordenación específica, mantener el orden original o el orden predeterminado de los datos
                     break;
             }
 
             productSectionTitle.textContent = sectionTitle;
 
-            // 4. Apply Pagination/Limit for display
+            // 4. Aplicar paginación/límite para la visualización
             let productsToDisplayFinal = [];
             if (limitForDisplay !== null) {
-                // For 'Inicio' and 'Los más vendidos', we have a fixed initial limit
+                // Para 'Inicio' y 'Los más vendidos', tenemos un límite inicial fijo
                 productsToDisplayFinal = sortedProducts.slice(0, limitForDisplay);
                 currentProductsDisplayedCount = productsToDisplayFinal.length;
             } else {
-                // For other categories, apply incremental pagination
-                if (currentProductsDisplayedCount === 0) { // First load for a category
+                // Para otras categorías, aplicar paginación incremental
+                if (currentProductsDisplayedCount === 0) { // Primera carga para una categoría
                     currentProductsDisplayedCount = productsPerPage;
                 }
                 productsToDisplayFinal = sortedProducts.slice(0, currentProductsDisplayedCount);
             }
 
-            displayProducts(productsToDisplayFinal); // Render the products
+            displayProducts(productsToDisplayFinal); // Renderizar los productos
 
-            // 5. Manage "VER MÁS PRODUCTOS" / "VER TODOS LOS PRODUCTOS" button
+            // 5. Administrar el botón "VER MÁS PRODUCTOS" / "VER TODOS LOS PRODUCTOS"
             viewMoreProductsContainer.innerHTML = '';
             if (currentSearchQuery) {
-                // No "view more" button when searching
+                // No hay botón "ver más" al buscar
                 viewMoreProductsContainer.classList.add('hidden');
             } else if (activeCategory === 'Inicio' || activeCategory === 'Los más vendidos') {
                 if (sortedProducts.length > limitForDisplay) {
@@ -1069,12 +1071,12 @@
                     button.textContent = 'VER TODOS LOS PRODUCTOS';
                     button.className = 'mt-8 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-200 block mx-auto';
                     button.onclick = () => {
-                        activeCategory = 'Todos'; // Change active category to 'Todos'
-                        isDesktopCategoriesExpanded = false; // Ensure categories list collapses
-                        displayCategories(); // Update category bar
-                        resetPagination(); // Reset pagination for 'Todos'
-                        renderProductsBasedOnFiltersAndSearch(); // Re-render to show all products
-                        window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to top
+                        activeCategory = 'Todos'; // Cambiar la categoría activa a 'Todos'
+                        isDesktopCategoriesExpanded = false; // Asegurarse de que la lista de categorías se colapse
+                        displayCategories(); // Actualizar la barra de categorías
+                        resetPagination(); // Reiniciar la paginación para 'Todos'
+                        renderProductsBasedOnFiltersAndSearch(); // Volver a renderizar para mostrar todos los productos
+                        window.scrollTo({ top: 0, behavior: 'smooth' }); // Desplazarse hacia arriba
                     };
                     viewMoreProductsContainer.classList.remove('hidden');
                     viewMoreProductsContainer.appendChild(button);
@@ -1087,7 +1089,7 @@
                 button.className = 'mt-8 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-200 block mx-auto';
                 button.onclick = () => {
                     currentProductsDisplayedCount += productsPerPage;
-                    renderProductsBasedOnFiltersAndSearch(); // Load more products
+                    renderProductsBasedOnFiltersAndSearch(); // Cargar más productos
                 };
                 viewMoreProductsContainer.classList.remove('hidden');
                 viewMoreProductsContainer.appendChild(button);
@@ -1095,11 +1097,11 @@
                 viewMoreProductsContainer.classList.add('hidden');
             }
 
-            updateSortDisplay(); // Ensure sort display is correct on every render
+            updateSortDisplay(); // Asegurarse de que la visualización de ordenación sea correcta en cada renderizado
         }
 
 
-        // --- Quantity and Price Logic ---
+        // --- Lógica de Cantidad y Precio ---
         window.updateQuantity = function(productId, change) {
             const qtyInput = document.getElementById(`qty-${productId}`);
             let currentQty = parseInt(qtyInput.value);
@@ -1125,55 +1127,64 @@
             const qtyInput = document.getElementById(`qty-${productId}`);
             const currentQty = parseInt(qtyInput.value);
 
-            const wholesalePriceElem = document.getElementById(`wholesale-price-${product.id}`);
+            const wholesalePriceElem = document.getElementById(`wholesale-price-display-${product.id}`);
             const wholesaleNoteElem = document.getElementById(`wholesale-note-${product.id}`);
-            const unitPriceElem = document.getElementById(`unit-price-${product.id}`);
+            const unitPriceElem = document.getElementById(`unit-price-display-${product.id}`);
             const unitNoteElem = document.getElementById(`unit-note-${product.id}`);
             const priceMessageElem = document.getElementById(`price-message-${product.id}`);
 
-            // Clear previous dynamic classes for both price elements and message
+            // Limpiar clases dinámicas anteriores para ambos elementos de precio y mensaje
             [wholesalePriceElem, unitPriceElem].forEach(el => {
                 el.classList.remove('text-3xl', 'text-2xl', 'font-bold', 'text-green-600', 'text-blue-600', 'text-base', 'text-gray-500', 'line-through');
             });
             [wholesaleNoteElem, unitNoteElem].forEach(el => {
                 el.classList.remove('text-green-600', 'text-blue-600');
-                el.classList.add('text-gray-500'); // Ensure default gray for notes
+                el.classList.add('text-gray-500'); // Asegurar el color gris predeterminado para las notas
             });
             priceMessageElem.classList.remove('text-green-700', 'text-blue-700', 'font-semibold');
-            priceMessageElem.textContent = ''; // Clear previous message
+            priceMessageElem.textContent = ''; // Limpiar mensaje anterior
 
-            if (currentQty >= product.wholesaleQuantity && product.wholesaleQuantity > 0) { // Ensure wholesaleQuantity is positive to apply discount
-                // If quantity meets wholesale, wholesale price is prominent, unit price is struck through
+            // Usar 0 si los precios no están definidos para evitar errores
+            const currentWholesalePrice = product.wholesalePrice !== undefined ? product.wholesalePrice : 0;
+            const currentUnitPrice = product.unitPrice !== undefined ? product.unitPrice : 0;
+            const currentWholesaleQuantity = product.wholesaleQuantity !== undefined ? product.wholesaleQuantity : 0;
+
+            if (currentQty >= currentWholesaleQuantity && currentWholesaleQuantity > 0) { // Asegurarse de que wholesaleQuantity sea positivo para aplicar el descuento
+                // Si la cantidad alcanza el umbral de mayorista, el precio mayorista es prominente, el precio unitario se tacha
                 wholesalePriceElem.classList.add('text-3xl', 'font-bold', 'text-green-600');
+                wholesalePriceElem.textContent = `$${formatPrice(currentWholesalePrice)}`; // Update displayed price
                 wholesaleNoteElem.classList.add('text-green-600');
                 wholesaleNoteElem.classList.remove('text-gray-500');
 
                 unitPriceElem.classList.add('text-base', 'text-gray-500', 'line-through');
+                unitPriceElem.textContent = `$${formatPrice(currentUnitPrice)}`; // Update displayed price
                 
-                const savingPerUnit = product.unitPrice - product.wholesalePrice;
+                const savingPerUnit = currentUnitPrice - currentWholesalePrice;
                 priceMessageElem.textContent = `¡Precio Mayorista Aplicado! Ahorras $${formatPrice(savingPerUnit)} por unidad.`;
                 priceMessageElem.classList.add('text-green-700', 'font-semibold');
 
             } else {
-                // If quantity is below wholesale, unit price is prominent, wholesale price is struck through
+                // Si la cantidad es inferior al umbral de mayorista, el precio unitario es prominente, el precio mayorista se tacha
                 unitPriceElem.classList.add('text-3xl', 'font-bold', 'text-blue-600');
+                unitPriceElem.textContent = `$${formatPrice(currentUnitPrice)}`; // Update displayed price
                 unitNoteElem.classList.add('text-blue-600');
                 unitNoteElem.classList.remove('text-gray-500');
 
-                if (product.wholesaleQuantity > 0) { // Only show strikethrough and message if wholesale exists
+                if (currentWholesaleQuantity > 0) { // Solo mostrar tachado y mensaje si existe precio mayorista
                     wholesalePriceElem.classList.add('text-base', 'text-gray-500', 'line-through');
-                    const remainingToWholesale = product.wholesaleQuantity - currentQty;
+                    wholesalePriceElem.textContent = `$${formatPrice(currentWholesalePrice)}`; // Update displayed price
+                    const remainingToWholesale = currentWholesaleQuantity - currentQty;
                     priceMessageElem.textContent = `¡Ahorra! Añade ${remainingToWholesale} ${remainingToWholesale === 1 ? 'unidad' : 'unidades'} más para precio mayorista.`;
                     priceMessageElem.classList.add('text-blue-700', 'font-semibold');
                 } else {
-                    wholesalePriceElem.classList.remove('text-base', 'text-gray-500', 'line-through'); // Remove if no wholesale
-                    wholesalePriceElem.textContent = `$${formatPrice(product.wholesalePrice)}`; // Ensure it shows regular wholesale price
+                    wholesalePriceElem.classList.remove('text-base', 'text-gray-500', 'line-through'); // Eliminar si no hay precio mayorista
+                    wholesalePriceElem.textContent = `$${formatPrice(currentWholesalePrice)}`; // Asegurarse de que muestre el precio mayorista regular
                 }
             }
         }
 
 
-        // --- Cart Management ---
+        // --- Gestión del Carrito ---
         window.addToCart = async function(productId) {
             const productToAdd = products.find(p => p.id === productId);
             const qtyInput = document.getElementById(`qty-${productId}`);
@@ -1184,49 +1195,62 @@
                 return;
             }
 
-            if (quantity > productToAdd.stock) {
-                showModal("Sin Stock", `Solo quedan ${productToAdd.stock} unidades de ${productToAdd.name}.`, [{ text: "Entendido", action: "close" }]);
+            // Asegúrate de que el stock es un número válido. Si no, considera 0.
+            const currentStock = typeof productToAdd.stock === 'number' ? productToAdd.stock : 0;
+
+            if (quantity > currentStock) {
+                showModal("Sin Stock", `Solo quedan ${currentStock} unidades de ${productToAdd.name}.`, [{ text: "Entendido", action: "close" }]);
                 return;
             }
 
-            // Determine the price based on quantity
+            // Determinar el precio basado en la cantidad
             let priceToUse;
-            if (quantity >= productToAdd.wholesaleQuantity) {
-                priceToUse = productToAdd.wholesalePrice;
+            const wholesaleQuantity = typeof productToAdd.wholesaleQuantity === 'number' ? productToAdd.wholesaleQuantity : 0;
+            const wholesalePrice = typeof productToAdd.wholesalePrice === 'number' ? productToAdd.wholesalePrice : 0;
+            const unitPrice = typeof productToAdd.unitPrice === 'number' ? productToAdd.unitPrice : 0;
+
+
+            if (quantity >= wholesaleQuantity && wholesaleQuantity > 0) {
+                priceToUse = wholesalePrice;
             } else {
-                priceToUse = productToAdd.unitPrice;
+                priceToUse = unitPrice;
             }
 
             const itemInCart = cart.find(item => item.productId === productId);
 
             try {
+                // Verifica que userId esté definido antes de intentar acceder a la colección
+                if (!userId || userId === 'anonymous') {
+                     showModal("Error de Autenticación", "No se pudo añadir al carrito. Por favor, recarga la página para asegurar tu sesión de usuario.", [{ text: "Cerrar", action: "close" }]);
+                     return;
+                }
                 const cartCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/cart`);
 
                 if (itemInCart) {
-                    // Update existing item in cart
+                    // Actualizar elemento existente en el carrito
                     const docRef = doc(cartCollectionRef, itemInCart.id);
                     await updateDoc(docRef, {
-                        quantity: quantity, // Overwrite with new quantity from input
-                        price: priceToUse // Update price in case threshold was crossed
+                        quantity: quantity, // Sobrescribir con la nueva cantidad del input
+                        price: priceToUse // Actualizar precio en caso de que se haya cruzado el umbral
                     });
                     showNotification(`Se actualizó ${quantity} x ${productToAdd.name}`, 'info');
                 } else {
-                    // Add new item to cart
+                    // Añadir nuevo elemento al carrito
                     await addDoc(cartCollectionRef, {
                         productId: productId,
                         name: productToAdd.name,
-                        price: priceToUse,
+                        price: priceToUse, // Almacenar el precio calculado (unitario o mayorista)
                         quantity: quantity,
                         imageUrl: productToAdd.imageUrl
                     });
                     showNotification(`¡AGREGADO! ${quantity} x ${productToAdd.name}`, 'success');
                 }
-                // Reset quantity input to 0 after adding to cart
+                // Reiniciar el input de cantidad a 0 después de añadir al carrito
                 qtyInput.value = 0;
-                updateDisplayedPrice(productId); // Reset price display
+                updateDisplayedPrice(productId); // Reiniciar la visualización del precio
             } catch (e) {
                 console.error("Error adding/updating document: ", e);
-                showModal("Error", "No se pudo añadir el producto al carrito. Inténtalo de nuevo.", [{ text: "Cerrar", action: "close" }]);
+                showModal("Error", `No se pudo añadir el producto al carrito. Error: ${e.message}.`, [{ text: "Cerrar", action: "close" }]);
             }
         };
 
@@ -1236,7 +1260,7 @@
         }
 
         function displayCartContents() {
-            currentStep = 0; // Indicate we are in the cart display phase
+            currentStep = 0; // Indicar que estamos en la fase de visualización del carrito
             if (cart.length === 0) {
                 showModal("Tu Carrito", '<p>Tu carrito está vacío.</p>', [{ text: "Cerrar", action: "close" }]);
                 return;
@@ -1246,10 +1270,10 @@
             let total = 0;
 
             cart.forEach(item => {
-                const productDetails = products.find(p => p.id === item.productId); // Get product details for stock
-                const maxQuantity = productDetails ? productDetails.stock : item.quantity; // Limit quantity to available stock
+                const productDetails = products.find(p => p.id === item.productId); 
+                const maxQuantity = productDetails && typeof productDetails.stock === 'number' ? productDetails.stock : (item.quantity > 0 ? item.quantity : 1000); 
 
-                const itemTotal = item.price * item.quantity;
+                const itemTotal = (item.price || 0) * (item.quantity || 0); 
                 total += itemTotal;
                 cartHtml += `
                     <li class="py-3 flex items-center justify-between">
@@ -1257,7 +1281,7 @@
                             <img src="${item.imageUrl}" alt="${item.name}" class="w-12 h-12 rounded-md mr-3 object-cover">
                             <div>
                                 <p class="font-semibold">${item.name}</p>
-                                <p class="text-sm text-gray-600">$${formatPrice(item.price)} / unidad</p>
+                                <p class="text-sm text-gray-600">$${formatPrice(item.price || 0)} / unidad</p>
                             </div>
                         </div>
                         <div class="flex items-center">
@@ -1292,29 +1316,37 @@
             if (!itemToUpdate) return;
 
             let newQuantity = itemToUpdate.quantity + change;
-            newQuantity = Math.max(1, newQuantity); // Minimum quantity is 1
-            newQuantity = Math.min(newQuantity, maxQuantity); // Cap at maxQuantity (stock)
+            newQuantity = Math.max(1, newQuantity); // La cantidad mínima es 1
+            newQuantity = Math.min(newQuantity, maxQuantity); // Limitar a maxQuantity (stock)
 
             if (newQuantity === itemToUpdate.quantity) {
                 return;
             }
 
             try {
+                if (!userId || userId === 'anonymous') {
+                     showModal("Error de Autenticación", "No se pudo actualizar el carrito. Por favor, recarga la página para asegurar tu sesión de usuario.", [{ text: "Cerrar", action: "close" }]);
+                     return;
+                }
                 const docRef = doc(db, `artifacts/${appId}/users/${userId}/cart`, itemId);
                 const productDetails = products.find(p => p.id === itemToUpdate.productId);
 
                 let newPrice;
                 if (productDetails) {
-                    newPrice = newQuantity >= productDetails.wholesaleQuantity ? productDetails.wholesalePrice : productDetails.unitPrice;
+                    const wholesaleQuantity = typeof productDetails.wholesaleQuantity === 'number' ? productDetails.wholesaleQuantity : 0;
+                    const wholesalePrice = typeof productDetails.wholesalePrice === 'number' ? productDetails.wholesalePrice : 0;
+                    const unitPrice = typeof productDetails.unitPrice === 'number' ? productDetails.unitPrice : 0;
+
+                    newPrice = (newQuantity >= wholesaleQuantity && wholesaleQuantity > 0) ? wholesalePrice : unitPrice;
                 } else {
-                    newPrice = itemToUpdate.price;
+                    newPrice = itemToUpdate.price; // Fallback al precio actual si no se encuentran los detalles del producto
                 }
 
                 await updateDoc(docRef, { quantity: newQuantity, price: newPrice });
                 showNotification(`Cantidad de ${itemToUpdate.name} actualizada a ${newQuantity}`, 'info');
             } catch (e) {
                 console.error("Error updating cart item quantity: ", e);
-                showModal("Error", "No se pudo actualizar la cantidad del producto.", [{ text: "Cerrar", action: "close" }]);
+                showModal("Error", `No se pudo actualizar la cantidad del producto. Error: ${e.message}`, [{ text: "Cerrar", action: "close" }]);
             }
         };
 
@@ -1324,21 +1356,35 @@
 
             let newQuantity = parseInt(value);
             if (isNaN(newQuantity) || newQuantity < 1) {
-                newQuantity = 1; // Default to 1 if invalid input
+                newQuantity = 1; // Por defecto a 1 si la entrada no es válida
             }
-            newQuantity = Math.min(newQuantity, maxQuantity); // Cap at maxQuantity (stock)
+            newQuantity = Math.min(newQuantity, maxQuantity); // Limitar a maxQuantity (stock)
+
+            // Actualizar el valor del input directamente para que refleje la cantidad clamped
+            const inputElement = document.querySelector(`#customModal input[value="${itemToUpdate.quantity}"]`);
+            if (inputElement) {
+                inputElement.value = newQuantity;
+            }
+
 
             if (newQuantity === itemToUpdate.quantity) {
                 return;
             }
 
             try {
+                if (!userId || userId === 'anonymous') {
+                     showModal("Error de Autenticación", "No se pudo actualizar el carrito. Por favor, recarga la página para asegurar tu sesión de usuario.", [{ text: "Cerrar", action: "close" }]);
+                     return;
+                }
                 const docRef = doc(db, `artifacts/${appId}/users/${userId}/cart`, itemId);
                 const productDetails = products.find(p => p.id === itemToUpdate.productId);
 
                 let newPrice;
                 if (productDetails) {
-                    newPrice = newQuantity >= productDetails.wholesaleQuantity ? productDetails.wholesalePrice : productDetails.unitPrice;
+                    const wholesaleQuantity = typeof productDetails.wholesaleQuantity === 'number' ? productDetails.wholesaleQuantity : 0;
+                    const wholesalePrice = typeof productDetails.wholesalePrice === 'number' ? productDetails.wholesalePrice : 0;
+                    const unitPrice = typeof productDetails.unitPrice === 'number' ? productDetails.unitPrice : 0;
+                    newPrice = (newQuantity >= wholesaleQuantity && wholesaleQuantity > 0) ? wholesalePrice : unitPrice;
                 } else {
                     newPrice = itemToUpdate.price;
                 }
@@ -1347,7 +1393,7 @@
                 showNotification(`Cantidad de ${itemToUpdate.name} actualizada a ${newQuantity}`, 'info');
             } catch (e) {
                 console.error("Error updating cart item quantity: ", e);
-                showModal("Error", "No se pudo actualizar la cantidad del producto.", [{ text: "Cerrar", action: "close" }]);
+                showModal("Error", `No se pudo actualizar la cantidad del producto. Error: ${e.message}`, [{ text: "Cerrar", action: "close" }]);
             }
         };
 
@@ -1357,20 +1403,24 @@
                 { text: "Cancelar", action: "close" },
                 { text: "Eliminar", action: "confirm", callback: async () => {
                     try {
+                        if (!userId || userId === 'anonymous') {
+                            showModal("Error de Autenticación", "No se pudo eliminar del carrito. Por favor, recarga la página para asegurar tu sesión de usuario.", [{ text: "Cerrar", action: "close" }]);
+                            return;
+                        }
                         const docRef = doc(db, `artifacts/${appId}/users/${userId}/cart`, itemId);
                         await deleteDoc(docRef);
                         showNotification(`¡ELIMINADO! ${itemName}`, 'error');
                     } catch (e) {
                         console.error("Error removing document: ", e);
-                        showModal("Error", `No se pudo eliminar "${itemName}" del carrito.`, [{ text: "Cerrar", action: "close" }]);
+                        showModal("Error", `No se pudo eliminar "${itemName}".`, [{ text: "Cerrar", action: "close" }]);
                     }
                 }}
             ]);
         };
 
-        // --- Multi-step Checkout Process ---
+        // --- Proceso de Pago en Múltiples Pasos ---
         function startCheckoutProcess() {
-            checkoutData = {}; // Clear previous data
+            checkoutData = {}; // Limpiar datos anteriores
             currentStep = 1;
             renderCheckoutStep();
         }
@@ -1380,7 +1430,7 @@
             let bodyContent = '';
             let buttons = [];
 
-            // Progress indicator
+            // Indicador de progreso
             bodyContent += `<p class="progress-indicator mb-4">Paso ${currentStep} de ${totalSteps}</p>`;
 
             switch (currentStep) {
@@ -1408,7 +1458,7 @@
                             </label>
                         </div>
                     `;
-                    // Add delivery address fields if delivery was previously selected
+                    // Añadir campos de dirección de entrega if la entrega fue seleccionada previamente como "Delivery"
                     if (checkoutData.deliveryType === 'Delivery') {
                          bodyContent += `
                             <div class="mt-4 p-4 border border-blue-200 bg-blue-50 rounded-md">
@@ -1461,7 +1511,7 @@
             }
 
             modalBody.innerHTML = bodyContent;
-            modalFooter.innerHTML = ''; // Clear existing buttons
+            modalFooter.innerHTML = ''; // Limpiar botones existentes
             buttons.forEach(btn => {
                 const buttonElement = document.createElement('button');
                 buttonElement.textContent = btn.text;
@@ -1472,13 +1522,13 @@
 
             customModal.classList.remove('hidden');
 
-            // Add event listeners for radio buttons to update delivery fields dynamically
+            // Añadir event listeners para los botones de radio para actualizar los campos de entrega dinámicamente
             if (currentStep === 2) {
                 const deliveryRadios = document.querySelectorAll('input[name="deliveryType"]');
                 deliveryRadios.forEach(radio => {
                     radio.addEventListener('change', (event) => {
                         checkoutData.deliveryType = event.target.value;
-                        renderCheckoutStep(); // Re-render to show/hide address fields
+                        renderCheckoutStep(); // Volver a renderizar para mostrar/ocultar los campos de dirección
                     });
                 });
             }
@@ -1512,7 +1562,7 @@
                     checkoutData.deliveryLocation = location;
                     checkoutData.deliveryZipCode = zipCode;
                 } else {
-                    // Clear delivery data if changed from Delivery to Retiro
+                    // Limpiar datos de entrega si se cambia de Delivery a Retiro
                     delete checkoutData.deliveryStreet;
                     delete checkoutData.deliveryLocation;
                     delete checkoutData.deliveryZipCode;
@@ -1526,9 +1576,9 @@
                 checkoutData.paymentMethod = selectedPaymentMethod.value;
             } else if (currentStep === 4) {
                 checkoutData.observations = document.getElementById('observations').value.trim();
-                // This is the last step, so send order
+                // Este es el último paso, así que enviar el pedido
                 sendOrderToWhatsApp();
-                return; // Prevent incrementing currentStep further
+                return; // Evitar incrementar currentStep más allá
             }
 
             currentStep++;
@@ -1541,7 +1591,7 @@
         }
 
         async function sendOrderToWhatsApp() {
-            // Validate final data (should be already done by nextStep, but a final check)
+            // Validar los datos finales (debería haberse hecho ya por nextStep, pero una verificación final)
             if (!checkoutData.fullName || !checkoutData.deliveryType || !checkoutData.paymentMethod || cart.length === 0) {
                  showModal("Error", "Faltan datos para completar tu pedido o el carrito está vacío.", [{ text: "Volver", action: "custom", className: 'bg-blue-600', color: 'text-white', hover: 'hover:bg-blue-700', callback: renderCheckoutStep }]);
                  return;
@@ -1553,9 +1603,9 @@
             orderSummary += `*📦 Productos:*\n`;
             let totalOrderPrice = 0;
             cart.forEach((item) => {
-                const itemTotal = item.price * item.quantity;
+                const itemTotal = (item.price || 0) * (item.quantity || 0); 
                 totalOrderPrice += itemTotal;
-                orderSummary += `* ${item.name} (${item.quantity}x) - $${formatPrice(item.price)} = *$${formatPrice(itemTotal)}*\n`;
+                orderSummary += `* ${item.name} (${item.quantity}x) - $${formatPrice(item.price || 0)} = *$${formatPrice(itemTotal)}*\n`;
             });
 
             orderSummary += `\n*💲 Total del Pedido: $${formatPrice(totalOrderPrice)}*\n\n`;
@@ -1572,12 +1622,16 @@
 
             orderSummary += `*¡Muchas gracias por tu compra!* 😊`;
 
-            // WhatsApp number
+            // Número de WhatsApp
             const whatsappNumber = '5491136013353';
             const whatsappUrl = `whatsapp://send?phone=${whatsappNumber}&text=${encodeURIComponent(orderSummary)}`;
 
             try {
-                // Clear the cart in Firestore after generating the order summary
+                // Limpiar el carrito en Firestore después de generar el resumen del pedido
+                if (!userId || userId === 'anonymous') {
+                    showModal("Error de Autenticación", "No se pudo limpiar el carrito. Por favor, recarga la página para asegurar tu sesión de usuario.", [{ text: "Cerrar", action: "close" }]);
+                    return;
+                }
                 const cartRef = collection(db, `artifacts/${appId}/users/${userId}/cart`);
                 const q = query(cartRef);
                 const querySnapshot = await getDocs(q);
@@ -1588,15 +1642,159 @@
                 await Promise.all(deletePromises);
 
                 showNotification("¡PEDIDO ENVIADO!", 'success');
-                customModal.classList.add('hidden'); // Close modal
-                currentStep = 0; // Reset step
-                window.open(whatsappUrl, '_blank'); // Open WhatsApp
+                customModal.classList.add('hidden'); // Cerrar modal
+                currentStep = 0; // Reiniciar paso
+                window.open(whatsappUrl, '_blank'); // Abrir WhatsApp
             } catch (e) {
-                console.error("Error sending order or clearing cart: ", e);
-                showModal("Error al Enviar Pedido", "Hubo un problema al procesar tu pedido o al abrir WhatsApp. Inténtalo de nuevo.", [{ text: "Cerrar", action: "close" }]);
+                console.error("Error al Enviar Pedido", e);
+                showModal("Error al Enviar Pedido", `Hubo un problema al procesar tu pedido o al abrir WhatsApp. Error: ${e.message}`, [{ text: "Cerrar", action: "close" }]);
             }
         }
 
+        // --- Generación de Productos Aleatorios y Carga a Firestore ---
+        // Listas de datos para la generación de productos
+        const productCategories = [
+            'Bebidas', 'Comestibles', 'Lácteos y Frescos', 'Limpieza',
+            'Cuidado Personal', 'Panadería y Pastelería', 'Snacks', 'Aderezos y Salsas',
+            'Frutas y Verduras', 'Bebés y Niños'
+        ];
+
+        const productSubcategories = {
+            'Bebidas': ['Gaseosas', 'Jugos', 'Aguas', 'Vinos', 'Cervezas', 'Infusiones'],
+            'Comestibles': ['Arroz y Legumbres', 'Pastas', 'Harinas y Premezclas', 'Enlatados', 'Condimentos', 'Aceites'],
+            'Lácteos y Frescos': ['Leches', 'Quesos', 'Yogures y Postres', 'Cremas y Untables'],
+            'Limpieza': ['Lavandería', 'Cocina', 'Desinfectantes', 'Papel y Servilletas', 'Baño'],
+            'Cuidado Personal': ['Cuidado del Cabello', 'Higiene Bucal', 'Higiene Corporal', 'Afeitado'],
+            'Panadería y Pastelería': ['Panes', 'Galletas', 'Bizcochos'],
+            'Snacks': ['Papas Fritas', 'Chocolates', 'Dulces', 'Frutos Secos'],
+            'Aderezos y Salsas': ['Salsas Frías', 'Salsas Calientes', 'Especias'],
+            'Frutas y Verduras': ['Frutas', 'Verduras'],
+            'Bebés y Niños': ['Pañales', 'Cuidado del Bebé', 'Alimentos para Bebés']
+        };
+
+        const productBaseNames = [
+            'Arroz', 'Fideos', 'Aceite', 'Azúcar', 'Sal', 'Leche', 'Yogur', 'Queso', 'Manteca',
+            'Pan', 'Galletas', 'Café', 'Té', 'Yerba Mate', 'Gaseosa', 'Jugo', 'Agua Mineral',
+            'Vino', 'Cerveza', 'Detergente', 'Lavandina', 'Jabón', 'Champú', 'Acondicionador',
+            'Pasta Dental', 'Cereal', 'Atún', 'Tomate', 'Mayonesa', 'Ketchup', 'Mostaza',
+            'Mermelada', 'Chocolate', 'Caramelos', 'Papas Fritas', 'Cebolla', 'Papa', 'Manzana',
+            'Naranja', 'Banana', 'Pañales', 'Toallitas Húmedas', 'Alcohol en Gel', 'Esponja', 'Servilletas'
+        ];
+
+        const genericDescriptions = [
+            "Un producto esencial para tu hogar, de la más alta calidad y frescura garantizada. Ideal para el consumo diario de toda la familia.",
+            "Disfruta de este artículo premium, perfecto para tus comidas o para un momento de relax. Sabor y calidad que se sienten en cada bocado/sorbo.",
+            "Innovación y practicidad en un solo producto. Diseñado para simplificar tu rutina y ofrecer resultados excelentes en cada uso.",
+            "El acompañante ideal para tus recetas favoritas. Su textura y sabor únicos lo hacen indispensable en tu cocina. ¡Descúbrelo!",
+            "Cuidado y bienestar al alcance de tu mano. Este producto está formulado con ingredientes seleccionados para tu piel y cuerpo."
+        ]; 
+
+        const productImages = [
+            'https://images.unsplash.com/photo-1542838183-8a9d18728d3a?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', // 
+            'https://images.unsplash.com/photo-1599026040713-39828d13e9a5?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', // 
+            'https://images.unsplash.com/photo-1547906939-bfdc0155b112?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', // 
+            'https://images.unsplash.com/photo-1625937172089-61ac9d81d6d6?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', // 
+            'https://images.unsplash.com/photo-1579621970795-87facc2f976d?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', // 
+            'https://images.unsplash.com/photo-1582299616039-444a9bf48083?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', // 
+            'https://images.unsplash.com/photo-1622253018484-904d9c4c7c8c?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', // 
+            'https://images.unsplash.com/photo-1594211116223-9523275c92c9?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', // 
+            'https://images.unsplash.com/photo-1594282463718-e3c7ba5d0f66?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', // 
+            'https://images.unsplash.com/photo-1586788224331-ad935c851174?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', // 
+        ];
+
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // --- Función para generar los 100 productos con todos los campos solicitados ---
+        function generateRandomProductsData(numProducts = 100) {
+            const generatedProducts = [];
+            for (let i = 0; i < numProducts; i++) {
+                const productId = `prod${Date.now()}-${i}-${getRandomInt(1000, 9999)}`;
+                
+                // Generar Categoría y Subcategoría
+                const randomCategory = productCategories[getRandomInt(0, productCategories.length - 1)];
+                const availableSubcategories = productSubcategories[randomCategory];
+                const randomSubcategory = availableSubcategories[getRandomInt(0, availableSubcategories.length - 1)];
+                
+                // Generar Nombre del Producto
+                const randomBaseName = productBaseNames[getRandomInt(0, productBaseNames.length - 1)];
+                const productName = `${randomBaseName} ${i+1}`; // Nombre simple y único
+
+                // Generar Precios y Cantidades (enteros para simplificar)
+                const unitPrice = getRandomInt(1, 20) * 1000; // PRECIO EN MILES, SIN CENTAVOS
+                const wholesalePrice = Math.floor(unitPrice * (0.6 + Math.random() * 0.2)); // 60-80% del precio unitario, SIN CENTAVOS
+                const wholesaleQuantity = getRandomInt(3, 15); // Cantidad para precio mayorista
+                const stock = getRandomInt(50, 500); // Stock aleatorio
+
+                // Generar URL de Imagen y Descripción
+                const imageUrl = productImages[getRandomInt(0, productImages.length - 1)]; 
+                const description = genericDescriptions[getRandomInt(0, genericDescriptions.length - 1)]; 
+
+                const product = {
+                    id: productId,
+                    name: productName,
+                    category: randomCategory,
+                    subcategory: randomSubcategory,
+                    imageUrl: imageUrl,
+                    unitPrice: unitPrice,
+                    wholesalePrice: wholesalePrice,
+                    wholesaleQuantity: wholesaleQuantity,
+                    stock: stock,
+                    description: description,
+                };
+                generatedProducts.push(product);
+            }
+            return generatedProducts;
+        }
+
+        async function uploadProductsToFirestore() {
+            if (!db || !userId) {
+                showModal("Error", "Firebase no está inicializado o el usuario no está autenticado.", [{ text: "Cerrar", action: "close" }]);
+                return;
+            }
+
+            const productsCollectionRef = collection(db, `artifacts/${appId}/public/data/products`);
+            const existingProductsSnapshot = await getDocs(productsCollectionRef);
+
+            if (!existingProductsSnapshot.empty) {
+                showModal("Productos Existentes", "Ya hay productos cargados en Firestore. ¿Deseas reemplazar **todos** los productos existentes con 100 nuevos productos aleatorios? Esta acción eliminará los productos actuales.", [
+                    { text: "Cancelar", action: "close" },
+                    { text: "Reemplazar y Cargar Nuevos", action: "confirm", callback: async () => {
+                        showModal("Eliminando Productos", "Eliminando productos existentes. Por favor, espera...", []);
+                        const deletePromises = existingProductsSnapshot.docs.map(doc => deleteDoc(doc.ref));
+                        await Promise.all(deletePromises);
+                        showNotification("Productos anteriores eliminados. Cargando nuevos...", 'info');
+                        await performProductUpload();
+                    }}
+                ]);
+            } else {
+                await performProductUpload();
+            }
+        }
+
+        async function performProductUpload() {
+            showModal("Cargando Productos", "Generando y cargando 100 productos de ejemplo a Firestore. Esto puede tardar un momento...", []);
+
+            try {
+                const newProducts = generateRandomProductsData(100); 
+                const productsCollectionRef = collection(db, `artifacts/${appId}/public/data/products`); 
+                let uploadedCount = 0;
+
+                for (const product of newProducts) {
+                    await setDoc(doc(productsCollectionRef, product.id), product); 
+                    uploadedCount++;
+                    modalBody.innerHTML = `Generando y cargando 100 productos de ejemplo a Firestore...<br/><br/>**Cargados: ${uploadedCount} de ${newProducts.length}**`;
+                }
+
+                showModal("Carga Completa", `Se cargaron ${uploadedCount} productos a Firestore. La página se actualizará automáticamente.`, [{ text: "Genial!", action: "close" }]);
+                showNotification("¡Productos cargados exitosamente! Refrescando...", 'success');
+            } catch (error) {
+                console.error("Error uploading products to Firestore:", error);
+                showModal("Error de Carga", `Hubo un problema al cargar los productos a Firestore. Consulta la consola del navegador para más detalles. Error: ${error.message}`, [{ text: "Cerrar", action: "close" }]);
+            }
+        }
 
         // --- Event Listeners ---
         document.getElementById('hamburger-menu').addEventListener('click', () => {
@@ -1614,18 +1812,18 @@
         });
 
         document.getElementById('cart-button').addEventListener('click', () => {
-            displayCartContents(); // This will show the cart content modal
+            displayCartContents(); // Esto mostrará el modal del contenido del carrito
         });
 
         document.getElementById('floating-cart-button').addEventListener('click', () => {
-            displayCartContents(); // This will show the cart content modal
+            displayCartContents(); // Esto mostrará el modal del contenido del carrito
         });
 
-        // Search bar toggle and input listener
+        // Alternar barra de búsqueda y listener de entrada
         searchToggleButton.addEventListener('click', () => {
             searchInput.classList.toggle('opacity-0');
             searchInput.classList.toggle('pointer-events-none');
-            // If the search bar becomes visible, focus it
+            // Si la barra de búsqueda se vuelve visible, enfocarla
             if (!searchInput.classList.contains('opacity-0')) {
                 searchInput.focus();
             }
@@ -1633,31 +1831,31 @@
 
         searchInput.addEventListener('input', (event) => {
             currentSearchQuery = event.target.value.trim();
-            activeCategory = 'Todos'; // Reset active category to 'Todos' (show all) when searching
-            activeSubcategory = 'Todos'; // Subcategories will be hidden
-            isDesktopCategoriesExpanded = false; // Collapse desktop categories when searching
+            activeCategory = 'Todos'; // Reiniciar la categoría activa a 'Todos' (mostrar todo) al buscar
+            activeSubcategory = 'Todos'; // Las subcategorías se ocultarán
+            isDesktopCategoriesExpanded = false; // Colapsar categorías de escritorio al buscar
             displayCategories();
             displaySubcategories();
-            resetPagination(); // Reset pagination when searching
+            resetPagination(); // Reiniciar paginación al buscar
             renderProductsBasedOnFiltersAndSearch();
         });
 
-        // Filter dropdown toggle
+        // Alternar menú desplegable de filtro de ordenación
         sortFilterToggle.addEventListener('click', (event) => {
-            event.stopPropagation(); // Prevent click from bubbling up to document and closing immediately
+            event.stopPropagation(); // Evitar que el clic se propague al documento y se cierre inmediatamente
             sortFilterDropdown.classList.toggle('hidden');
         });
 
-        // Close filter dropdown when clicking outside
+        // Cerrar menú desplegable de filtro de ordenación al hacer clic fuera
         document.addEventListener('click', (event) => {
             if (!sortFilterDropdown.contains(event.target) && !sortFilterToggle.contains(event.target)) {
                 sortFilterDropdown.classList.add('hidden');
             }
         });
 
-        // Ensure search input is visible on larger screens by default
+        // Asegurarse de que el input de búsqueda sea visible en pantallas grandes por defecto
         function checkScreenSizeForSearchInput() {
-            if (window.innerWidth >= 1024) { // Equivalent to Tailwind's lg breakpoint
+            if (window.innerWidth >= 1024) { // Equivalente al breakpoint lg de Tailwind
                 searchInput.classList.remove('opacity-0', 'pointer-events-none');
                 searchInput.classList.add('lg:static', 'lg:translate-y-0', 'lg:w-auto', 'lg:opacity-100', 'lg:pointer-events-auto', 'lg:ml-4');
             } else {
@@ -1666,9 +1864,12 @@
             }
         }
 
-        // Call on load and on resize
+        // Llamar al cargar y al redimensionar
         checkScreenSizeForSearchInput();
         window.addEventListener('resize', checkScreenSizeForSearchInput);
+
+        // Event listener para el botón de carga de productos
+        uploadProductsBtn.addEventListener('click', uploadProductsToFirestore);
     </script>
 </body>
 </html>
